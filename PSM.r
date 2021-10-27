@@ -26,6 +26,7 @@ library(tableone)
 
 ht <- read.csv('D:\\BFM\\HT_psm.csv', encoding = 'euc-kr')
 ar <- read.csv('D:\\BFM\\AR_psm.csv', encoding = 'euc-kr')
+dm <- read.csv('D:\\BFM\\DM_psm.csv', encoding = 'euc-kr')
 
 ################
 
@@ -40,6 +41,11 @@ ar <- read.csv('D:\\BFM\\AR_psm.csv', encoding = 'euc-kr')
   df <- copy(ar)
   target <- df$ar_drug_90
   psm_col <- "ar_drug_90"
+
+  # DM (당뇨병)
+  df <- copy(dm)
+  target <- df$dm_drug_90
+  psm_col <- "dm_drug_90"
 
 ###################
 
@@ -93,6 +99,23 @@ describe(df_1)
   # 
   # df$DRK_NEW = factor(df$DRK_NEW)
   # df$PA_NEW = factor(df$PA_NEW)
+
+
+#### DM
+  df <- subset(df, select=-c(기수, EDATE, NIHID))
+  
+  # 운동, 알콜 관련 categorical 변수들 뺄 때 실행
+  df <- subset(df, select=-c(PHYACTL, PHYACTM, PHYACTH, DRK_NEW, PA_NEW))
+  
+  # factor
+  df$SMOKE = factor(df$SMOKE) 
+  
+  # # PA_NEW, DRK_NEW 전처리 (NEW 변수들 안 뺄 경우에만 실행)
+  # df <- df[df$PA_NEW != 0, ]
+  # df <- df[df$DRK_NEW != 0, ]
+  # 
+  # df$DRK_NEW = factor(df$DRK_NEW)
+  # df$PA_NEW = factor(df$PA_NEW)
   
 ######################
 
@@ -127,11 +150,17 @@ step_variables <- c(all.vars(formula(step_lm)[[3]])) # stepwise로 선택된 변
 #########################
 
 
-# 선택된 변수들에서 인슐린 빼기 (AR, 인슐린 매칭 안 됨)
+# 변수들에서 인슐린 빼기 (AR일 경우만, 인슐린 매칭 x)
+  # ALL
+  variables <- variables[!variables %in% c('DRUGINS')]
+  # STEP
+  step_variables <- step_variables[!step_variables %in% c('DRUGINS')]
 
-step_variables <- step_variables[!step_variables %in% c('DRUGINS')]
-
-variables <- variables[!variables %in% c('DRUGINS')]
+# 변수들에서 뇌졸중약 빼기 (DM일 경우만, ICD 매칭 x)
+  # ALL
+  variables <- variables[!variables %in% c('DRUGICD')]
+  # STEP
+  step_variables <- step_variables[!step_variables %in% c('DRUGICD')]
 
 
 #### PS Matching ####
@@ -167,10 +196,16 @@ variables <- variables[!variables %in% c('DRUGINS')]
     
     # 1:4
     mod_match <- matchit(psm_f, method = "nearest", ratio = 4, data = df)
+
+    # # 1:5
+    # mod_match <- matchit(psm_f, method = "nearest", ratio = 5, data = df)
     
     mod_match
 
     dta_m <- match.data(mod_match)
+    
+    # # export dta_m
+    # write.csv(dta_m, file = "HT_psm_4.csv", row.names = TRUE)
     
     # vars - with all variables
     vars <- c(variables)
@@ -197,11 +232,20 @@ print(tabmatched, smd = TRUE)
 
 ##############
 
+# # pvalue > 0.5 인 변수들 추가로 빼기 (AR, selected, 1:3)
+# variables <- variables[!variables %in% c('WAIST', 'GLU0_ORI', 'AST_ORI', 'TCHL_ORI', 'HB_ORI', 'SMOKE', 'DRUGINS', 'DRUGICD', 'FMHEA', 'FMDM', 'PRT16_U', 'TOTALC')]
+
+# pvalue > 0.6 인 변수들 추가로 빼기 (DM, ALL, 1:4)
+variables <- variables[!variables %in% c('SMOKE', 'DRUGHT', 'DRUGLP', 'FMHEA', 'KID', 'MET_CAL')]
 
 #### GLM ####
   
   # create glm formula
   variables = c(variables, psm_col)
+
+  # DM일 경우 실행
+  variables <- variables[!variables %in% c('DRUGICD')]
+
   glm_f <- as.formula(
     paste('final_CKD', 
           paste(variables, collapse = " + "), 
