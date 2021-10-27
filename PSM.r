@@ -102,7 +102,7 @@ describe(df_1)
 
 
 #### DM
-  df <- subset(df, select=-c(기수, EDATE, NIHID))
+  df <- subset(df, select=-c(기수, EDATE, NIHID, DRUGINS))
   
   # 운동, 알콜 관련 categorical 변수들 뺄 때 실행
   df <- subset(df, select=-c(PHYACTL, PHYACTM, PHYACTH, DRK_NEW, PA_NEW))
@@ -193,6 +193,12 @@ step_variables <- c(all.vars(formula(step_lm)[[3]])) # stepwise로 선택된 변
     
     # 1:3
     mod_match <- matchit(psm_f, method = "nearest", ratio = 3, data = df)
+
+    # 1:3 - optimal
+    mod_match <- matchit(psm_f, method = "optimal", ratio = 3, data = df)
+
+    # 1:3 - nearest + randomforest
+    mod_match <- matchit(psm_f, method = "nearest", distance = "randomforest", ratio = 3, data = df)
     
     # 1:4
     mod_match <- matchit(psm_f, method = "nearest", ratio = 4, data = df)
@@ -232,8 +238,8 @@ print(tabmatched, smd = TRUE)
 
 ##############
 
-# # pvalue > 0.5 인 변수들 추가로 빼기 (AR, selected, 1:3)
-# variables <- variables[!variables %in% c('WAIST', 'GLU0_ORI', 'AST_ORI', 'TCHL_ORI', 'HB_ORI', 'SMOKE', 'DRUGINS', 'DRUGICD', 'FMHEA', 'FMDM', 'PRT16_U', 'TOTALC')]
+# pvalue > 0.5 인 변수들 추가로 빼기 (AR, selected, 1:3)
+variables <- variables[!variables %in% c('WAIST', 'GLU0_ORI', 'AST_ORI', 'TCHL_ORI', 'HB_ORI', 'SMOKE', 'DRUGINS', 'DRUGICD', 'FMHEA', 'FMDM', 'PRT16_U', 'TOTALC')]
 
 # pvalue > 0.6 인 변수들 추가로 빼기 (DM, ALL, 1:4)
 variables <- variables[!variables %in% c('SMOKE', 'DRUGHT', 'DRUGLP', 'FMHEA', 'KID', 'MET_CAL')]
@@ -247,15 +253,15 @@ variables <- variables[!variables %in% c('SMOKE', 'DRUGHT', 'DRUGLP', 'FMHEA', '
   variables <- variables[!variables %in% c('DRUGICD')]
 
   glm_f <- as.formula(
-    paste('final_CKD', 
-          paste(variables, collapse = " + "), 
+    paste("final_CKD", 
+          paste(variables, collapse = " + "),
           sep = " ~ ")
   )
   
   glm_f
   
   # fit
-  fit <- glm(glm_f, family=binomial(link="logit"), data = dta_m)
+  fit <- glm(glm_f, family = binomial(link = "logit"), data = dta_m)
   summary(fit)
 
 ####################
