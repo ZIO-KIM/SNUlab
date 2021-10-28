@@ -26,7 +26,7 @@ library(tableone)
 
 ht <- read.csv('D:\\BFM\\HT_psm.csv', encoding = 'euc-kr')
 ar <- read.csv('D:\\BFM\\AR_psm.csv', encoding = 'euc-kr')
-dm <- read.csv('D:\\BFM\\DM_psm.csv', encoding = 'euc-kr')
+dm_all <- read.csv('DM_all_psm.csv', encoding = 'euc-kr')
 
 ################
 
@@ -43,9 +43,9 @@ dm <- read.csv('D:\\BFM\\DM_psm.csv', encoding = 'euc-kr')
   psm_col <- "ar_drug_90"
 
   # DM (당뇨병)
-  df <- copy(dm)
-  target <- df$dm_drug_90
-  psm_col <- "dm_drug_90"
+  df <- copy(dm_all)
+  target <- df$dm_all_drug_90
+  psm_col <- "dm_all_drug_90"
 
 ###################
 
@@ -68,7 +68,10 @@ describe(df_1)
 #### Preprocess ####
 
 #### HT
-  df <- subset(df, select=-c(기수, EDATE, NIHID, DRUGHT))
+  df <- subset(df, select = -c(기수, EDATE, NIHID, DRUGHT))
+
+  # WEIGHT, HEIGHT 빼기 (BMI와 corr 높음)
+  df <- subset(df, select = -c(WEIGHT, HEIGHT))
 
   # 운동, 알콜 관련 categorical 변수들 뺄 때 실행
   df <- subset(df, select=-c(PHYACTL, PHYACTM, PHYACTH, DRK_NEW, PA_NEW))
@@ -85,13 +88,16 @@ describe(df_1)
 
 
 #### AR
-  df <- subset(df, select=-c(기수, EDATE, NIHID))
+  df <- subset(df, select = -c(기수, EDATE, NIHID))
+
+   # WEIGHT, HEIGHT 빼기 (BMI와 corr 높음)
+  df <- subset(df, select = -c(WEIGHT, HEIGHT))
   
   # 운동, 알콜 관련 categorical 변수들 뺄 때 실행
-  df <- subset(df, select=-c(PHYACTL, PHYACTM, PHYACTH, DRK_NEW, PA_NEW))
+  df <- subset(df, select = -c(PHYACTL, PHYACTM, PHYACTH, DRK_NEW, PA_NEW))
   
   # factor
-  df$SMOKE = factor(df$SMOKE) 
+  df$SMOKE = factor(df$SMOKE)
   
   # # PA_NEW, DRK_NEW 전처리 (NEW 변수들 안 뺄 경우에만 실행)
   # df <- df[df$PA_NEW != 0, ]
@@ -102,13 +108,16 @@ describe(df_1)
 
 
 #### DM
-  df <- subset(df, select=-c(기수, EDATE, NIHID, DRUGINS))
+  df <- subset(df, select = -c(기수, EDATE, NIHID, DRUGINS))
+
+   # WEIGHT, HEIGHT 빼기 (BMI와 corr 높음)
+  df <- subset(df, select = -c(WEIGHT, HEIGHT))
   
   # 운동, 알콜 관련 categorical 변수들 뺄 때 실행
-  df <- subset(df, select=-c(PHYACTL, PHYACTM, PHYACTH, DRK_NEW, PA_NEW))
+  df <- subset(df, select = -c(PHYACTL, PHYACTM, PHYACTH, DRK_NEW, PA_NEW))
   
   # factor
-  df$SMOKE = factor(df$SMOKE) 
+  df$SMOKE = factor(df$SMOKE)
   
   # # PA_NEW, DRK_NEW 전처리 (NEW 변수들 안 뺄 경우에만 실행)
   # df <- df[df$PA_NEW != 0, ]
@@ -118,6 +127,24 @@ describe(df_1)
   # df$PA_NEW = factor(df$PA_NEW)
   
 ######################
+
+
+#### 유의했던 변수들만 살리기 ####
+  
+  # DM
+  df <- subset(df, select = c(AGE, SEX, AST_ORI, TRIGLY_ORI, DRUGHT, TOTALC, MET_CAL, 
+  eGFR, BMI, GLU0_ORI, KID, WAIST, HB_ORI, FMDM, dm_all_drug_90, final_CKD))
+
+  # HT
+  df <- subset(df, select = c(AGE, SEX, TRIGLY_ORI, FMHTN, eGFR, BMI, AST_ORI, MET_CAL, R_GTP_TR,
+  HB_ORI, DRUGINS, FMHEA, ht_drug_90, final_CKD))
+
+  # AR
+  df <- subset(df, select = c(AGE, SEX, R_GTP_TR, AST_ORI, BMI, WAIST, FMHTN, FMHEA, KID, 
+  TRIGLY_ORI, HB_ORI, HDL_ORI, TOTALC, TCHL_ORI, ar_drug_90, final_CKD))
+
+
+################################
 
 
 #### Variables ####
@@ -140,7 +167,7 @@ describe(df_1)
   
 df2 <- df[variables]
 
-full <- glm(target ~ ., family=binomial(link="logit"), data = df2)
+full <- glm(target ~ ., family = binomial(link = "logit"), data = df2)
 step_lm <- step(full, direction = 'both')
 
 summary(step_lm)
@@ -168,7 +195,7 @@ step_variables <- c(all.vars(formula(step_lm)[[3]])) # stepwise로 선택된 변
   #### create psm formula - with all variables
   psm_f <- as.formula(
     paste(psm_col, 
-          paste(variables, collapse = " + "), 
+          paste(variables, collapse = " + "),
           sep = " ~ ")
   )
   
@@ -222,7 +249,7 @@ step_variables <- c(all.vars(formula(step_lm)[[3]])) # stepwise로 선택된 변
 #################
 
     
-#### SMD #### 
+#### SMD ####
 tabmatched <- CreateTableOne(vars = vars, strata = psm_col, data = dta_m, test = FALSE)
 print(tabmatched, smd = TRUE)
 # summary(tabmatched)
@@ -238,19 +265,22 @@ print(tabmatched, smd = TRUE)
 
 ##############
 
-# pvalue > 0.5 인 변수들 추가로 빼기 (AR, selected, 1:3)
-variables <- variables[!variables %in% c('WAIST', 'GLU0_ORI', 'AST_ORI', 'TCHL_ORI', 'HB_ORI', 'SMOKE', 'DRUGINS', 'DRUGICD', 'FMHEA', 'FMDM', 'PRT16_U', 'TOTALC')]
+# # pvalue > 0.5 인 변수들 추가로 빼기 (AR, selected, 1:3)
+# variables <- variables[!variables %in% c('WAIST', 'GLU0_ORI', 'AST_ORI', 'TCHL_ORI', 'HB_ORI', 'SMOKE', 'DRUGINS', 'DRUGICD', 'FMHEA', 'FMDM', 'PRT16_U', 'TOTALC')]
 
-# pvalue > 0.6 인 변수들 추가로 빼기 (DM, ALL, 1:4)
-variables <- variables[!variables %in% c('SMOKE', 'DRUGHT', 'DRUGLP', 'FMHEA', 'KID', 'MET_CAL')]
+# # pvalue > 0.6 인 변수들 추가로 빼기 (DM, ALL, 1:4)
+# variables <- variables[!variables %in% c('SMOKE', 'DRUGHT', 'DRUGLP', 'FMHEA', 'KID', 'MET_CAL')]
 
 #### GLM ####
   
   # create glm formula
   variables = c(variables, psm_col)
 
-  # DM일 경우 실행
-  variables <- variables[!variables %in% c('DRUGICD')]
+  # # DM일 경우 실행
+  # variables <- variables[!variables %in% c('DRUGICD')]
+
+  # HT일 경우 실행
+  variables <- variables[!variables %in% c('DRUGINS')]
 
   glm_f <- as.formula(
     paste("final_CKD", 
@@ -261,11 +291,13 @@ variables <- variables[!variables %in% c('SMOKE', 'DRUGHT', 'DRUGLP', 'FMHEA', '
   glm_f
   
   # fit
-  fit <- glm(glm_f, family = binomial(link = "logit"), data = dta_m)
+  fit <- glm(glm_f, family = binomial(link = "logit"), data = df)
   summary(fit)
 
 ####################
-  
+
+table(df$SMOKE)
+  vif(fit)
 ################# end #################
 
 t.test(final_CKD ~ ht_drug_90, data = dta_m)
