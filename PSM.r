@@ -73,6 +73,10 @@ describe(df_1)
   # WEIGHT, HEIGHT 빼기 (BMI와 corr 높음)
   df <- subset(df, select = -c(WEIGHT, HEIGHT))
 
+  # KID = 2 (신장 치료 받고 있는 사람들) 빼기
+  df <- df[df$KID != 2, ]
+  df <- subset(df, select = -c(KID))
+
   # 운동, 알콜 관련 categorical 변수들 뺄 때 실행
   df <- subset(df, select=-c(PHYACTL, PHYACTM, PHYACTH, DRK_NEW, PA_NEW))
   
@@ -92,6 +96,10 @@ describe(df_1)
 
    # WEIGHT, HEIGHT 빼기 (BMI와 corr 높음)
   df <- subset(df, select = -c(WEIGHT, HEIGHT))
+
+  # KID = 2 (신장 치료 받고 있는 사람들) 빼기
+  df <- df[df$KID != 2, ]
+  df <- subset(df, select = -c(KID))
   
   # 운동, 알콜 관련 categorical 변수들 뺄 때 실행
   df <- subset(df, select = -c(PHYACTL, PHYACTM, PHYACTH, DRK_NEW, PA_NEW))
@@ -112,6 +120,10 @@ describe(df_1)
 
    # WEIGHT, HEIGHT 빼기 (BMI와 corr 높음)
   df <- subset(df, select = -c(WEIGHT, HEIGHT))
+
+  # KID = 2 (신장 치료 받고 있는 사람들) 빼기
+  df <- df[df$KID != 2, ]
+  df <- subset(df, select = -c(KID))
   
   # 운동, 알콜 관련 categorical 변수들 뺄 때 실행
   df <- subset(df, select = -c(PHYACTL, PHYACTM, PHYACTH, DRK_NEW, PA_NEW))
@@ -140,8 +152,7 @@ describe(df_1)
   HB_ORI, DRUGINS, FMHEA, ht_drug_90, final_CKD))
 
   # AR
-  df <- subset(df, select = c(AGE, SEX, R_GTP_TR, AST_ORI, BMI, WAIST, FMHTN, FMHEA, KID, 
-  TRIGLY_ORI, HB_ORI, HDL_ORI, TOTALC, TCHL_ORI, ar_drug_90, final_CKD))
+  df <- subset(df, select = -c(GLU0_ORI, TCHL_ORI, HDL_ORI, TRIGLY_ORI, SMOKE, DRUGICD, DRUGLP, SBP, DBP, BMI))
 
 
 ################################
@@ -164,7 +175,8 @@ describe(df_1)
 
 
 #### Stepwise variable selection ####
-  
+
+target <- df[[psm_col]]
 df2 <- df[variables]
 
 full <- glm(target ~ ., family = binomial(link = "logit"), data = df2)
@@ -279,7 +291,10 @@ print(tabmatched, smd = TRUE)
   # # DM일 경우 실행
   # variables <- variables[!variables %in% c('DRUGICD')]
 
-  # HT일 경우 실행
+  # # HT일 경우 실행
+  # variables <- variables[!variables %in% c('DRUGINS')]
+
+  # AR일 경우 실행
   variables <- variables[!variables %in% c('DRUGINS')]
 
   glm_f <- as.formula(
@@ -291,7 +306,7 @@ print(tabmatched, smd = TRUE)
   glm_f
   
   # fit
-  fit <- glm(glm_f, family = binomial(link = "logit"), data = df)
+  fit <- glm(glm_f, family = binomial(link = "logit"), data = dta_m)
   summary(fit)
 
 ####################
