@@ -141,7 +141,7 @@ describe(df_1)
 ######################
 
 
-#### 유의했던 변수들만 살리기 ####
+#### 유의했던 변수들만 살릴 경우 ####
   
   # DM
   df <- subset(df, select = c(AGE, SEX, AST_ORI, TRIGLY_ORI, DRUGHT, TOTALC, MET_CAL, 
@@ -283,10 +283,16 @@ print(tabmatched, smd = TRUE)
 # # pvalue > 0.6 인 변수들 추가로 빼기 (DM, ALL, 1:4)
 # variables <- variables[!variables %in% c('SMOKE', 'DRUGHT', 'DRUGLP', 'FMHEA', 'KID', 'MET_CAL')]
 
+tmp = variables
 #### GLM ####
-  
+
   # create glm formula
-  variables = c(variables, psm_col)
+  variables = c(tmp, psm_col)
+
+  # AR - 유의하지 않은 변수들 한개씩 빼가면서 테스트
+  variables <- variables[!variables %in% c('TCHL_ORI', 'DRUGICD', 'TRIGLY_ORI', 'SBP', 'GLU0_ORI', 
+  'BMI', 'DRUGLP', 'DBP', 'MET_CAL', 'SEX', 'SMOKE', 'DRUGHT', 'ALT_ORI', 
+  'HB_ORI', 'FMHEA')]
 
   # # DM일 경우 실행
   # variables <- variables[!variables %in% c('DRUGICD')]
