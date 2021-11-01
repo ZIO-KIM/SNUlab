@@ -289,10 +289,10 @@ tmp = variables
   # create glm formula
   variables = c(tmp, psm_col)
 
-  # AR - 유의하지 않은 변수들 한개씩 빼가면서 테스트
-  variables <- variables[!variables %in% c('TCHL_ORI', 'DRUGICD', 'TRIGLY_ORI', 'SBP', 'GLU0_ORI', 
-  'BMI', 'DRUGLP', 'DBP', 'MET_CAL', 'SEX', 'SMOKE', 'DRUGHT', 'ALT_ORI', 
-  'HB_ORI', 'FMHEA')]
+  # # AR - 유의하지 않은 변수들 한개씩 빼가면서 테스트
+  # variables <- variables[!variables %in% c('TCHL_ORI', 'DRUGICD', 'TRIGLY_ORI', 'SBP', 'GLU0_ORI', 
+  # 'BMI', 'DRUGLP', 'DBP', 'MET_CAL', 'SEX', 'SMOKE', 'DRUGHT', 'ALT_ORI', 
+  # 'HB_ORI', 'FMHEA')]
 
   # # DM일 경우 실행
   # variables <- variables[!variables %in% c('DRUGICD')]
@@ -300,8 +300,8 @@ tmp = variables
   # # HT일 경우 실행
   # variables <- variables[!variables %in% c('DRUGINS')]
 
-  # AR일 경우 실행
-  variables <- variables[!variables %in% c('DRUGINS')]
+  # # AR일 경우 실행
+  # variables <- variables[!variables %in% c('DRUGINS')]
 
   glm_f <- as.formula(
     paste("final_CKD", 
@@ -312,7 +312,7 @@ tmp = variables
   glm_f
   
   # fit
-  fit <- glm(glm_f, family = binomial(link = "logit"), data = dta_m)
+  fit <- glm(glm_f, family = binomial(link = "logit"), data = df)
   summary(fit)
 
 ####################

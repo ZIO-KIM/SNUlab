@@ -13,45 +13,45 @@ library(car)
 
 #### read df
 
-eGFR_change_df <- read.csv('eGFR_change_df_1th.csv', encoding = 'euc-kr') # baseline 1±â
-eGFR_change2_df <- read.csv('eGFR_change2_df_5th.csv', encoding = 'euc-kr') # baseline 5±â
-# CKD_df <- read.csv('CKD_df.csv', encoding = 'euc-kr')  # Á¦¿Ü
-FM_change1_df <- read.csv('FM_change1_df_1th.csv', encoding = 'euc-kr') # baseline 1±â
-FM_change2_df <- read.csv('FM_change2_df_1th.csv', encoding = 'euc-kr') # baseline 1±â
-FM_change3_df <- read.csv('FM_change3_df_1th.csv', encoding = 'euc-kr') # baseline 1±â
+eGFR_change_df <- read.csv('eGFR_change_df_1th.csv', encoding = 'euc-kr') # baseline 1ï¿½ï¿½
+eGFR_change2_df <- read.csv('eGFR_change2_df_5th.csv', encoding = 'euc-kr') # baseline 5ï¿½ï¿½
+# CKD_df <- read.csv('CKD_df.csv', encoding = 'euc-kr')  # ï¿½ï¿½ï¿½ï¿½
+FM_change1_df <- read.csv('FM_change1_df_1th.csv', encoding = 'euc-kr') # baseline 1ï¿½ï¿½
+FM_change2_df <- read.csv('FM_change2_df_1th.csv', encoding = 'euc-kr') # baseline 1ï¿½ï¿½
+FM_change3_df <- read.csv('FM_change3_df_1th.csv', encoding = 'euc-kr') # baseline 1ï¿½ï¿½
 
-CKD_df <- read.csv('CKD_df_5th.csv', encoding = 'euc-kr') # baseline 5±â
+CKD_df <- read.csv('CKD_df_5th.csv', encoding = 'euc-kr') # baseline 5ï¿½ï¿½
 
 ###################
 
 
 #### copy df to use
 
-# eGFR_change (eGFR 5±â - eGFR 1±â)
+# eGFR_change (eGFR 5ï¿½ï¿½ - eGFR 1ï¿½ï¿½)
 df <- copy(eGFR_change_df)
 target <- df$eGFR_change
 target_name <- "eGFR_change"
 df_selection <- subset(df, select = -c(eGFR_change))
 
-# eGFR_change2 (eGFR 7±â - eGFR 5±â)
+# eGFR_change2 (eGFR 7ï¿½ï¿½ - eGFR 5ï¿½ï¿½)
 df <- copy(eGFR_change2_df)
 target <- df$eGFR_change2
 target_name <- "eGFR_change2"
 df_selection <- subset(df, select = -c(eGFR_change2))
 
-# FM_change1 (BFM 5±â - BFM 1±â)
+# FM_change1 (BFM 5ï¿½ï¿½ - BFM 1ï¿½ï¿½)
 df <- copy(FM_change1_df)
 target <- df$FM_change1
 target_name <- "FM_change1"
 df_selection <- subset(df, select = -c(FM_change1))
 
-# FM_change2 ((TW - LBMhat)5±â - (TW - LBMhat)1±â)
+# FM_change2 ((TW - LBMhat)5ï¿½ï¿½ - (TW - LBMhat)1ï¿½ï¿½)
 df <- copy(FM_change2_df)
 target <- df$FM_change2
 target_name <- "FM_change2"
 df_selection <- subset(df, select = -c(FM_change2))
 
-# FM_change3 (BFMhat 5±â - BFMhat 1±â)
+# FM_change3 (BFMhat 5ï¿½ï¿½ - BFMhat 1ï¿½ï¿½)
 df <- copy(FM_change3_df)
 target <- df$FM_change3
 target_name <- "FM_change3"
@@ -77,7 +77,7 @@ summary(df)
 
 #### Preprocess
 
-df <- subset(df, select=-c(±â¼ö, EDATE, NIHID))
+df <- subset(df, select=-c(ï¿½ï¿½ï¿½, EDATE, NIHID))
 df$BODYFAT = df$BODYFAT/1000
 df$SMOKE = factor(df$SMOKE)
 df$DRK_NEW = factor(df$DRK_NEW)
@@ -91,7 +91,7 @@ df$yoyo_10[df$yoyo_10 == 3] <- 2
 
 # table(df$yoyo_07)
 
-df_selection <- subset(df_selection, select=-c(±â¼ö, EDATE, NIHID))
+df_selection <- subset(df_selection, select=-c(ï¿½ï¿½ï¿½, EDATE, NIHID))
 df_selection$BODYFAT = df_selection$BODYFAT/1000
 df_selection$SMOKE = factor(df_selection$SMOKE)
 df_selection$DRK_NEW = factor(df_selection$DRK_NEW)
@@ -138,8 +138,8 @@ summary(step_lm)
   
 #### Adjusted Fit
 
-  all_variables <- c(all.vars(formula(step_lm)[[3]])) # stepwise·Î ¼±ÅÃµÈ º¯¼öµé¸¸ °¡Á®¿À±â
-  all_variables <- all_variables[!all_variables %in% c('yoyo_03', 'yoyo_05', 'yoyo_07', 'yoyo_10')] # yoyo º¯¼öµé ¼±ÅÃµÇ¾úÀ» °æ¿ì »©ÁÖ±â
+  all_variables <- c(all.vars(formula(step_lm)[[3]])) # stepwiseï¿½ï¿½ ï¿½ï¿½ï¿½Ãµï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½é¸¸ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+  all_variables <- all_variables[!all_variables %in% c('yoyo_03', 'yoyo_05', 'yoyo_07', 'yoyo_10')] # yoyo ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ÃµÇ¾ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½Ö±ï¿½
   
   yoyo_added_variables <- c(all.vars(formula(step_lm)[[3]]))
 
@@ -154,7 +154,7 @@ summary(step_lm)
   df = copy(tmp)
   yoyo_added_variables = copy(all_variables)
 
-  if ('yoyo_03' %in% all_variables == FALSE) {  # yoyo_03 ¼±ÅÃ ¾ÈµÆÀ» °æ¿ì¿¡¸¸
+  if ('yoyo_03' %in% all_variables == FALSE) {  # yoyo_03 ï¿½ï¿½ï¿½ï¿½ ï¿½Èµï¿½ï¿½ï¿½ ï¿½ï¿½ì¿¡ï¿½ï¿½
     yoyo_added_variables <- append(all_variables, 'yoyo_03')
   }
 
@@ -174,7 +174,7 @@ summary(step_lm)
   df = copy(tmp)
   yoyo_added_variables = copy(all_variables)
   
-  if ('yoyo_03' %in% all_variables == FALSE) {  # yoyo_03 ¼±ÅÃ ¾ÈµÆÀ» °æ¿ì¿¡¸¸
+  if ('yoyo_03' %in% all_variables == FALSE) {  # yoyo_03 ï¿½ï¿½ï¿½ï¿½ ï¿½Èµï¿½ï¿½ï¿½ ï¿½ï¿½ì¿¡ï¿½ï¿½
     yoyo_added_variables <- append(all_variables, 'yoyo_03')  
   }
   
@@ -196,7 +196,7 @@ summary(step_lm)
   df = copy(tmp)
   yoyo_added_variables = copy(all_variables)
 
-  if ('yoyo_05' %in% all_variables == FALSE) {  # yoyo_05 ¼±ÅÃ ¾ÈµÆÀ» °æ¿ì¿¡¸¸
+  if ('yoyo_05' %in% all_variables == FALSE) {  # yoyo_05 ï¿½ï¿½ï¿½ï¿½ ï¿½Èµï¿½ï¿½ï¿½ ï¿½ï¿½ì¿¡ï¿½ï¿½
     yoyo_added_variables <- append(all_variables, 'yoyo_05')  
   }
 
@@ -216,7 +216,7 @@ summary(step_lm)
   df = copy(tmp)
   yoyo_added_variables = copy(all_variables)
   
-  if ('yoyo_05' %in% all_variables == FALSE) {  # yoyo_05 ¼±ÅÃ ¾ÈµÆÀ» °æ¿ì¿¡¸¸
+  if ('yoyo_05' %in% all_variables == FALSE) {  # yoyo_05 ï¿½ï¿½ï¿½ï¿½ ï¿½Èµï¿½ï¿½ï¿½ ï¿½ï¿½ì¿¡ï¿½ï¿½
     yoyo_added_variables <- append(all_variables, 'yoyo_05')  
   }
   
@@ -238,7 +238,7 @@ summary(step_lm)
   df = copy(tmp)
   yoyo_added_variables = copy(all_variables)
   
-  if ('yoyo_07' %in% all_variables == FALSE) {  # yoyo_07 ¼±ÅÃ ¾ÈµÆÀ» °æ¿ì¿¡¸¸
+  if ('yoyo_07' %in% all_variables == FALSE) {  # yoyo_07 ï¿½ï¿½ï¿½ï¿½ ï¿½Èµï¿½ï¿½ï¿½ ï¿½ï¿½ì¿¡ï¿½ï¿½
     yoyo_added_variables <- append(all_variables, 'yoyo_07')  
   }
 
@@ -260,7 +260,7 @@ summary(step_lm)
   df = copy(tmp)
   yoyo_added_variables = copy(all_variables)
   
-  if ('yoyo_07' %in% all_variables == FALSE) {  # yoyo_07 ¼±ÅÃ ¾ÈµÆÀ» °æ¿ì¿¡¸¸
+  if ('yoyo_07' %in% all_variables == FALSE) {  # yoyo_07 ï¿½ï¿½ï¿½ï¿½ ï¿½Èµï¿½ï¿½ï¿½ ï¿½ï¿½ì¿¡ï¿½ï¿½
     yoyo_added_variables <- append(all_variables, 'yoyo_07')  
   }
   
@@ -282,7 +282,7 @@ summary(step_lm)
   df = copy(tmp)
   yoyo_added_variables = copy(all_variables)
   
-  if ('yoyo_10' %in% all_variables == FALSE) {  # yoyo_10 ¼±ÅÃ ¾ÈµÆÀ» °æ¿ì¿¡¸¸
+  if ('yoyo_10' %in% all_variables == FALSE) {  # yoyo_10 ï¿½ï¿½ï¿½ï¿½ ï¿½Èµï¿½ï¿½ï¿½ ï¿½ï¿½ì¿¡ï¿½ï¿½
     yoyo_added_variables <- append(all_variables, 'yoyo_10')  
   }
   
@@ -302,7 +302,7 @@ summary(step_lm)
   df = copy(tmp)
   yoyo_added_variables = copy(all_variables)
   
-  if ('yoyo_10' %in% all_variables == FALSE) {  # yoyo_10 ¼±ÅÃ ¾ÈµÆÀ» °æ¿ì¿¡¸¸
+  if ('yoyo_10' %in% all_variables == FALSE) {  # yoyo_10 ï¿½ï¿½ï¿½ï¿½ ï¿½Èµï¿½ï¿½ï¿½ ï¿½ï¿½ì¿¡ï¿½ï¿½
     yoyo_added_variables <- append(all_variables, 'yoyo_10')  
   }
   
