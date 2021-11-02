@@ -18,16 +18,17 @@ library(tableone)
 
 #### read df
 
-mi <- read.csv('data\\MI_psm.csv', encoding = 'euc-kr')
+cancer <- read.csv('data\\Cancer_ar_psm.csv', encoding = 'euc-kr')
 
-############
+##################
+
 
 #### copy df to use
 
-  # MI (심근경색)
-  df <- copy(mi)
-  target <- df$final_MI
-  psm_col <- "final_MI"
+  # Cancer
+  df <- copy(cancer)
+  target <- df$Cancer
+  psm_col <- "ar_drug_90"
 
 #####################
 
@@ -37,22 +38,6 @@ mi <- read.csv('data\\MI_psm.csv', encoding = 'euc-kr')
 #### MI
   # 기본변수 빼기
   df <- subset(df, select = -c(기수, EDATE, NIHID))
-
-  # CKD도 빼기
-  df <- subset(df, select = -c(final_CKD))
-
-  # WEIGHT, HEIGHT 빼기 (BMI와 corr 높음)
-  df <- subset(df, select = -c(WEIGHT, HEIGHT))
-
-  # KID = 2 (신장 치료 받고 있는 사람들) 빼기
-  df <- df[df$KID != 2, ]
-  df <- subset(df, select = -c(KID))
-
-  # 운동, 알콜 관련 categorical 변수들 뺄 때 실행
-  df <- subset(df, select=-c(PHYACTL, PHYACTM, PHYACTH, DRK_NEW, PA_NEW))
-  
-  # factor
-  df$SMOKE = factor(df$SMOKE)
 
   # GLM 할때는 뺄것
   df <- subset(df, select = -c(TIME))
@@ -66,11 +51,25 @@ mi <- read.csv('data\\MI_psm.csv', encoding = 'euc-kr')
   variables <- colnames(df)
 
   # 신장변수 전체 (약물변수 포함)
-  variables <- variables[!variables %in% c(psm_col)]  # for PSM
+  variables <- variables[!variables %in% c('Cancer', psm_col)]  # for PSM
 
   variables
 
 #############
+
+#### Stepwise variable selection ####
+
+target <- df$Cancer
+df2 <- df[variables]
+
+full <- glm(target ~ ., family = binomial(link = "logit"), data = df2)
+step_lm <- step(full, direction = 'both')
+
+summary(step_lm)
+
+step_variables2 <- c(all.vars(formula(step_lm)[[3]])) # stepwise로 선택된 변수들만 가져오기
+
+#########################
 
 
 #### PS Matching ####
@@ -124,10 +123,12 @@ print(tabmatched, smd = TRUE)
 
 #### GLM ####
 
+  variables = c(variables, psm_col)
+
   # create glm formula
 
   glm_f <- as.formula(
-    paste("final_MI", 
+    paste("Cancer",
           paste(variables, collapse = " + "),
           sep = " ~ ")
   )
@@ -135,7 +136,7 @@ print(tabmatched, smd = TRUE)
   glm_f
   
   # fit
-  fit <- glm(glm_f, family = binomial(link = "logit"), data = df)
+  fit <- glm(glm_f, family = binomial(link = "logit"), data = dta_m)
   summary(fit)
 
   # vif
