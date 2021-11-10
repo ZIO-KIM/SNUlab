@@ -3,6 +3,7 @@
 install.packages('MatchIt') 
 install.packages('tableone') # SMD
 install.packages("httpgd")
+install.packages("gbm")
 #################
 
 #### library ####
@@ -19,6 +20,7 @@ library(car)
 library(psych) # describe
 library(MatchIt)
 library(tableone)
+library(gbm)
 #################
 
 
@@ -27,6 +29,28 @@ library(tableone)
 ht <- read.csv('D:\\BFM\\HT_psm.csv', encoding = 'euc-kr')
 ar <- read.csv('D:\\BFM\\AR_psm.csv', encoding = 'euc-kr')
 dm_all <- read.csv('DM_all_psm.csv', encoding = 'euc-kr')
+
+cancer = read.csv('data\\Cancer\\Cancer_All.csv')
+mi <- read.csv('data\\MI_final_Baseline1st+OccuredOnceOrMore.csv', encoding = 'euc-kr')
+
+table(cancer$Cancer) # 270명
+table(mi$final_MI) # 66명
+table(mi$final_CKD) # 648명
+
+################
+
+#### merge ####
+#### CKD는 merge 필요 없음
+
+  # outcome: cancer
+  ht <- merge(ht, cancer, by = 'NIHID')
+  ar <- merge(ar, cancer, by = 'NIHID')
+  dm_all <- merge(dm_all, cancer, by = 'NIHID')
+
+  # outcome: MI
+  ht <- merge(ht, mi, by = 'NIHID')
+  ar <- merge(ar, mi, by = 'NIHID')
+  dm_all <- merge(dm_all, mi, by = 'NIHID')
 
 ################
 
@@ -78,10 +102,10 @@ describe(df_1)
   df <- subset(df, select = -c(KID))
 
   # 운동, 알콜 관련 categorical 변수들 뺄 때 실행
-  df <- subset(df, select=-c(PHYACTL, PHYACTM, PHYACTH, DRK_NEW, PA_NEW))
+  df <- subset(df, select = -c(PHYACTL, PHYACTM, PHYACTH, DRK_NEW, PA_NEW))
   
   # factor
-  df$SMOKE = factor(df$SMOKE) 
+  df$SMOKE = factor(df$SMOKE)
   
   # # PA_NEW, DRK_NEW 전처리 (NEW 변수들 안 뺄 경우에만 실행)
   # df <- df[df$PA_NEW != 0, ]
@@ -164,7 +188,7 @@ describe(df_1)
   variables <- colnames(df)
 
   # 신장변수 전체 (약물변수 포함)
-  variables <- variables[!variables %in% c(psm_col, 'final_CKD')]  # for PSM
+  variables <- variables[!variables %in% c(psm_col, 'final_CKD', 'Cancer', 'final_MI', 'TIME')]  # for PSM
 
   # # pvalue > 0.5 인 변수들 추가로 빼기 (HT, 1:1)
   # variables <- variables[!variables %in% c('GLU0_ORI', 'R_GTP_TR', 'ALT_ORI', 'HDL_ORI', 'HB_ORI', 'SMOKE', 'DRUGICD', 'FMDM', 'SBP')]
@@ -174,7 +198,8 @@ describe(df_1)
 #############
 
 
-#### Stepwise variable selection ####
+#### Stepwise variable selection - for PSM ####
+#### PSM 할때는 굳이 변수 선택 할 필요 없다! 안돌려도 됨 ####
 
 target <- df[[psm_col]]
 df2 <- df[variables]
@@ -200,6 +225,7 @@ step_variables <- c(all.vars(formula(step_lm)[[3]])) # stepwise로 선택된 변
   variables <- variables[!variables %in% c('DRUGICD')]
   # STEP
   step_variables <- step_variables[!step_variables %in% c('DRUGICD')]
+###########################
 
 
 #### PS Matching ####
@@ -248,6 +274,21 @@ step_variables <- c(all.vars(formula(step_lm)[[3]])) # stepwise로 선택된 변
     mod_match
 
     dta_m <- match.data(mod_match)
+
+    dta_m_tmp <- match.data(mod_match, drop.unmatched = FALSE)
+
+    dta_m_tmp_1 <- dta_m_tmp[dta_m_tmp$weights == 1,]
+    dta_m_tmp_0 <- dta_m_tmp[dta_m_tmp$weights == 0,]
+
+    matched <- ggplot(dta_m_tmp_1, aes(x=distance)) + geom_histogram(binwidth=.01)
+    unmatched <- ggplot(dta_m_tmp_0, aes(x=distance)) + geom_histogram(binwidth=.01)
+
+    # draw plot to check distribution (overlapped)
+    ggplot(dta_m_tmp, aes(distance, fill = factor(weights))) + geom_histogram(binwidth = .01)
+    
+    # draw plot to check distribution (not overlapped)
+    ggarrange(matched, unmatched)
+
     
     # # export dta_m
     # write.csv(dta_m, file = "HT_psm_4.csv", row.names = TRUE)
@@ -260,6 +301,28 @@ step_variables <- c(all.vars(formula(step_lm)[[3]])) # stepwise로 선택된 변
     
 #################
 
+
+#### try GBM - predicted values are used for propensity score ####
+
+gps <- gbm(glm_f, distribution = "bernoulli", data = df, n.trees = 100,
+interaction.depth = 4, train.fraction = 0.8, shrinkage = 0.0005)
+df$gpsvalue <- predict(gps, type = "response")
+summary(gps)
+
+#################
+
+
+#### Adding weights calculated by propensity score ####
+
+  ## for the treatment group : 1 / df$distance
+  ## for the control group : 1 / (1 - df$distance)
+
+  # Attaching weight to the dataset
+  dta_m$weight.ATE <- ifelse(dta_m[[psm_col]] == 1, 1/dta_m$distance, 1/(1-dta_m$distance))
+
+############################
+
+
     
 #### SMD ####
 tabmatched <- CreateTableOne(vars = vars, strata = psm_col, data = dta_m, test = FALSE)
@@ -267,13 +330,34 @@ print(tabmatched, smd = TRUE)
 # summary(tabmatched)
 
   # calculate CKD patients in each group
-  # 약물 복용 x
-  count(dta_m[dta_m[psm_col] == 0 & dta_m$final_CKD == 0, ])
-  count(dta_m[dta_m[psm_col] == 0 & dta_m$final_CKD == 1, ])
-  
-  # 약물 복용 o
-  count(dta_m[dta_m[psm_col] == 1 & dta_m$final_CKD == 0, ])
-  count(dta_m[dta_m[psm_col] == 1 & dta_m$final_CKD == 1, ])
+    # 약물 복용 x
+    count(dta_m[dta_m[psm_col] == 0 & dta_m$final_CKD == 0, ])
+    count(dta_m[dta_m[psm_col] == 0 & dta_m$final_CKD == 1, ])
+    
+    # 약물 복용 o
+    count(dta_m[dta_m[psm_col] == 1 & dta_m$final_CKD == 0, ])
+    count(dta_m[dta_m[psm_col] == 1 & dta_m$final_CKD == 1, ])
+  #######################################
+
+  # calculate Cancer patients in each group
+    # 약물 복용 x
+    count(dta_m[dta_m[psm_col] == 0 & dta_m$Cancer == 0, ])
+    count(dta_m[dta_m[psm_col] == 0 & dta_m$Cancer == 1, ])
+    
+    # 약물 복용 o
+    count(dta_m[dta_m[psm_col] == 1 & dta_m$Cancer == 0, ])
+    count(dta_m[dta_m[psm_col] == 1 & dta_m$Cancer == 1, ])
+  #######################################
+
+  # calculate MI patients in each group
+    # 약물 복용 x
+    count(dta_m[dta_m[psm_col] == 0 & dta_m$final_MI == 0, ])
+    count(dta_m[dta_m[psm_col] == 0 & dta_m$final_MI == 1, ])
+    
+    # 약물 복용 o
+    count(dta_m[dta_m[psm_col] == 1 & dta_m$final_MI == 0, ])
+    count(dta_m[dta_m[psm_col] == 1 & dta_m$final_MI == 1, ])
+  #######################################
 
 ##############
 
@@ -284,10 +368,29 @@ print(tabmatched, smd = TRUE)
 # variables <- variables[!variables %in% c('SMOKE', 'DRUGHT', 'DRUGLP', 'FMHEA', 'KID', 'MET_CAL')]
 
 tmp = variables
+
+
+
+#### Stepwise variable selection - for Logistic ####
+
+target <- dta_m$final_MI
+df2 <- dta_m[variables]
+
+full <- glm(target ~ ., family = binomial(link = "logit"), data = df2)
+step_lm <- step(full, direction = 'both')
+
+summary(step_lm)
+
+step_variables <- c(all.vars(formula(step_lm)[[3]])) # stepwise로 선택된 변수들만 가져오기
+
+#########################
+
+
+
 #### GLM ####
 
   # create glm formula
-  variables = c(tmp, psm_col)
+  variables = c(step_variables, psm_col)
 
   # # AR - 유의하지 않은 변수들 한개씩 빼가면서 테스트
   # variables <- variables[!variables %in% c('TCHL_ORI', 'DRUGICD', 'TRIGLY_ORI', 'SBP', 'GLU0_ORI', 
@@ -304,7 +407,7 @@ tmp = variables
   # variables <- variables[!variables %in% c('DRUGINS')]
 
   glm_f <- as.formula(
-    paste("final_CKD", 
+    paste("final_MI",
           paste(variables, collapse = " + "),
           sep = " ~ ")
   )
@@ -312,13 +415,50 @@ tmp = variables
   glm_f
   
   # fit
-  fit <- glm(glm_f, family = binomial(link = "logit"), data = df)
+  fit <- glm(glm_f, family = binomial(link = "logit"), data = dta_m)
+  summary(fit)
+
+  # fit - with weights
+  fit <- glm(glm_f, family = binomial(link = "logit"), data = dta_m, weights = (weight.ATE))
+  summary(fit)
+
+  # fit - weight랑 treat만 넣어서 확인해보기
+  fit <- glm(final_MI ~ ar_drug_90, family = binomial(link = "logit"), data = dta_m, weights = (weight.ATE))
   summary(fit)
 
 ####################
 
+
+#### try GBM - predicted values are used for propensity score ####
+
+gps <- gbm(glm_f, distribution = "bernoulli", data = df, n.trees = 100, 
+interaction.depth = 4, train.fraction = 0.8, shrinkage = 0.0005)
+
+summary(gps)
+
+#################
+
+#### Odds Ratio ####
+# odds ratio function
+ORtable = function(x, digits = 2) {
+  suppressMessages(a <- confint(x))
+  result = data.frame(exp(coef(x)), exp(a))
+  result = round(result, digits)
+  result = cbind(result, round(summary(x)$coefficient[,4],3))
+  colnames(result) = c("OR", "2.5%", "97.5%", "p")
+  result
+}
+
+ORtable(fit)
+####################
+
 table(df$SMOKE)
-  vif(fit)
+vif(fit)
 ################# end #################
 
-t.test(final_CKD ~ ht_drug_90, data = dta_m)
+t.test(Cancer ~ ht_drug_90, data = dta_m)
+
+ggplot(dta_m, aes(weight.ATE)) + geom_histogram(binwidth = 5)
+ggplot(dta_m, aes(distance)) + geom_histogram(binwidth = .01)
+describe(dta_m$weight.ATE)
+describe(dta_m$distance)
