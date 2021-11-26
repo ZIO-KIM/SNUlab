@@ -68,6 +68,8 @@ df = copy(mi)
 
 #### COX ####
 
+    # treatment가 안들어갔는데 이게 맞나? 
+    # treatment를 주고, time 기간 동안의 treatment 1/0에 따른 생존률을 비교하는 게 아닌가? 
     # fit
     fit <- coxph(Surv(TIME, final_MI) ~ AGE + SEX + WAIST + GLU0_ORI + R_GTP_TR + AST_ORI + ALT_ORI + TCHL_ORI + HDL_ORI +  # nolint
     TRIGLY_ORI + HB_ORI + SMOKE + DRUGINS + DRUGHT + DRUGICD + DRUGLP +
