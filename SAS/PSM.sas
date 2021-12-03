@@ -7,11 +7,11 @@ proc psmatch data=zio.HT_psm;
 	psmodel ht_drug_90(Treated='1')= AGE SEX HEIGHT WEIGHT WAIST GLU0_ORI R_GTP_TR AST_ORI ALT_ORI
 	TCHL_ORI HDL_ORI TRIGLY_ORI HB_ORI SMOKE DRUGINS DRUGICD DRUGLP FMHTN FMHEA FMDM PRT16_U
 	KID TOTALC MET_CAL SBP DBP eGFR BMI;
-	match method=optimal(k=1) stat=lps caliper=.;
+	match method=optimal(k=2) stat=lps caliper=.;
 	assess lps var=(AGE SEX HEIGHT WEIGHT WAIST GLU0_ORI R_GTP_TR AST_ORI ALT_ORI
 	TCHL_ORI HDL_ORI TRIGLY_ORI HB_ORI SMOKE DRUGINS DRUGICD DRUGLP FMHTN FMHEA FMDM PRT16_U
 	KID TOTALC MET_CAL SBP DBP eGFR BMI) / weight=none plots=(boxplot barchart);
-	output out(obs=match)=zio.Outgs lps=_Lps matchid=_MatchID;
+	output out(obs=match)=zio.Outgs_HT lps=_Lps matchid=_MatchID;
 run;
 
 /* PS Match - AR*/ 
@@ -52,8 +52,26 @@ proc print data=zio.outgs1(obs=10);
 var NIHID _PS_ _LPS _MatchWgt_ _MatchID;
 run;
 
+/* draw histogram of propensity score - HT*/ 
+proc univariate data=zio.outgs_ht noprint;
+ class ht_drug_90;
+ histogram _PS_ / normal (color=red) nrows=2;
+run; 
+
+/* draw histogram of propensity score - AR */ 
+proc univariate data=zio.outgs_ar noprint;
+ class ar_drug_90;
+ histogram _PS_ / normal (color=red) nrows=2;
+run; 
+
+/* draw histogram of propensity score - DM */ 
+proc univariate data=zio.outgs_dm noprint;
+ class dm_all_drug_90;
+ histogram _PS_ / normal (color=red) nrows=2;
+run; 
+
 /* logistic - HT */ 
-proc logistic data=zio.outgs;
+proc logistic data=zio.outgs_HT;
 model final_CKD(event='1') = AGE SEX HEIGHT WEIGHT WAIST GLU0_ORI R_GTP_TR AST_ORI ALT_ORI
 	TCHL_ORI HDL_ORI TRIGLY_ORI HB_ORI SMOKE DRUGINS DRUGICD DRUGLP FMHTN FMHEA FMDM PRT16_U
 	KID TOTALC MET_CAL SBP DBP eGFR BMI ht_drug_90 / link=logit technique=fisher;
@@ -75,9 +93,9 @@ run;
 
 /* Cox - HT */ 
 ods graphics on; 
-proc phreg data=zio.outgs plot(overlay)=survival; 
+proc phreg data=zio.outgs_ht plot(overlay)=survival; 
 	model TIME*final_CKD(1) = ht_drug_90; 
-	baseline covariates=zio.outgs out=_null_; 
+	baseline covariates=zio.outgs_ht out=_null_; 
 run; 
 
 /* Cox - AR */ 
@@ -93,6 +111,12 @@ proc phreg data=zio.outgs_dm plot(overlay)=survival;
 	model TIME*final_CKD(1) = dm_all_drug_90; 
 	baseline covariates=zio.outgs_dm out=_null_; 
 run; 
+
+/*/* Cox with categorical variables */ */
+/*proc phreg data=zio.outgs_ht;*/
+/*class SMOKE(ref=1) DRUGINS(ref=1) DRUGHT(ref=1) DRUGICD(ref=1) ;*/
+/*model TIME*final_CKD(1) = Kps Duration Age Cell Prior|Therapy;*/
+/*run;*/
 
 
 
