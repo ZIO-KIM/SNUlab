@@ -112,11 +112,11 @@ proc phreg data=zio.outgs_dm plot(overlay)=survival;
 	baseline covariates=zio.outgs_dm out=_null_; 
 run; 
 
-/*/* Cox with categorical variables */ */
-/*proc phreg data=zio.outgs_ht;*/
-/*class SMOKE(ref=1) DRUGINS(ref=1) DRUGHT(ref=1) DRUGICD(ref=1) ;*/
-/*model TIME*final_CKD(1) = Kps Duration Age Cell Prior|Therapy;*/
-/*run;*/
+/* Cox with categorical variables */ 
+proc phreg data=zio.outgs_ht;
+class SMOKE(ref=1) DRUGINS(ref=1) DRUGHT(ref=1) DRUGICD(ref=1);
+model TIME*final_CKD(1) = SMOKE DRUGINS DRUGHT DRUGICD;
+run;
 
 
 
