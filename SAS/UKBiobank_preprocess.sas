@@ -130,11 +130,12 @@ RUN;
 
 /* --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- */ 
 
-/* 2021-12-06 MON 
+/* 2021-12-06 MON ~ 
 1. CKD 진단여부, CKD 진단날짜 전처리 - python에서 완료 - ukb46987_n18preprocessed.sas7bdat 
 2. 약물변수들 전처리 - python에서 완료 - ukb45783_drugpreprocessed.sas7bdat
-3. Date 변수들 모아서 last follow up 열 만들기
-4. 기본 검진변수들 전처리
+3. Date 변수들 모아서 last follow up 열 만들기 - python 에서 진행중 - 
+4. 최종 DF에서 1기만 추출하기
+5. 기본 검진변수들 전처리
 */ 
 
 * ukb37332 - Date 변수만 추출하기; 
@@ -226,6 +227,7 @@ FROM zio.ukb37332_date AS a INNER JOIN zio.ukb45783_date AS b
 ON a.eid_num = b.eid; 
 QUIT; 
 
+/* final date table */ 
 PROC SQL; 
 CREATE TABLE zio.ukb_date_merged AS 
 SELECT a.*, b.* 
@@ -233,11 +235,152 @@ FROM work.ukb_date_merged_tmp AS a INNER JOIN zio.ukb46987_date AS b
 ON a.eid = b.eid; 
 QUIT; 
 
-/* find maximum date of all */ 
+/* change final date table eid from character to numeric */ 
+DATA zio.ukb_date_merged;
+SET zio.ukb_date_merged; 
+	eid_num = input(eid, 16.);
+RUN;
+
+/* find maximum date of all - 여기서부터 다시 */ * 자료형 다르고 열 너무 많아서 잘 안됨, python 으로 옮겨서 하자; 
 DATA zio.ukb_date_merged; 
 SET zio.ukb_date_merged; 
 last_followup_date = max(of _character_); 
 RUN; 
+
+
+/******** 기본 검진변수들 전처리 ********/
+/**** ukb_merged_1st.sas7bdat 에서 *****/ 
+
+* 6153 - 약물 복용력 (female) 변수들 질환별로 분리; 
+DATA zio.ukb_merged_1st_preprocessed; 
+SET zio.ukb_merged_1st; 
+IF '31-0.0'n = 0 AND ('6153-0.0'n = 1 OR '6153-0.1'n = 1 OR '6153-0.2'n = 1 OR '6153-0.3'n = 1) THEN Cholesterol_lowering_medication = 1;   /* Cholesterol_lowering_medication coded 1 */ 
+IF '31-0.0'n = 0 AND ('6153-0.0'n = 2 OR '6153-0.1'n = 2 OR '6153-0.2'n = 2 OR '6153-0.3'n = 2) THEN Blood_pressure_medication = 1;  /* Blood pressure medication coded 2 */ 
+IF '31-0.0'n = 0 AND ('6153-0.0'n = 3 OR '6153-0.1'n = 3 OR '6153-0.2'n = 3 OR '6153-0.3'n = 3) THEN Insulin = 1;  /* Insulin coded 3 */ 
+
+IF '31-0.0'n = 0 AND ('6153-0.0'n = -7 OR '6153-0.1'n = -7 OR '6153-0.2'n = -7 OR '6153-0.3'n = -7) THEN Cholesterol_lowering_medication = 0;   /* if coded -7, none of above has been taken */ 
+IF '31-0.0'n = 0 AND ('6153-0.0'n = -7 OR '6153-0.1'n = -7 OR '6153-0.2'n = -7 OR '6153-0.3'n = -7) THEN Blood_pressure_medication = 0;   /* if coded -7, none of above has been taken */ 
+IF '31-0.0'n = 0 AND ('6153-0.0'n = -7 OR '6153-0.1'n = -7 OR '6153-0.2'n = -7 OR '6153-0.3'n = -7) THEN Insulin = 0;   /* if coded -7, none of above has been taken */ 
+
+RUN; 
+
+* 6177 - 약물 복용력 (male) 변수들 질환별로 분리; 
+DATA zio.ukb_merged_1st_preprocessed; 
+SET zio.ukb_merged_1st_preprocessed; 
+IF '31-0.0'n = 1 AND ('6177-0.0'n = 1 OR '6177-0.1'n = 1 OR '6177-0.2'n = 1) THEN Cholesterol_lowering_medication = 1;   /* Cholesterol_lowering_medication coded 1 */ 
+IF '31-0.0'n = 1 AND ('6177-0.0'n = 2 OR '6177-0.1'n = 2 OR '6177-0.2'n = 2) THEN Blood_pressure_medication = 1;  /* Blood pressure medication coded 2 */ 
+IF '31-0.0'n = 1 AND ('6177-0.0'n = 3 OR '6177-0.1'n = 3 OR '6177-0.2'n = 3) THEN Insulin = 1;  /* Insulin coded 3 */ 
+
+IF '31-0.0'n = 1 AND ('6177-0.0'n = -7 OR '6177-0.1'n = -7 OR '6177-0.2'n = -7) THEN Cholesterol_lowering_medication = 0;   /* if coded -7, none of above has been taken */ 
+IF '31-0.0'n = 1 AND ('6177-0.0'n = -7 OR '6177-0.1'n = -7 OR '6177-0.2'n = -7) THEN Blood_pressure_medication = 0;   /* if coded -7, none of above has been taken */ 
+IF '31-0.0'n = 1 AND ('6177-0.0'n = -7 OR '6177-0.1'n = -7 OR '6177-0.2'n = -7) THEN Insulin = 0;   /* if coded -7, none of above has been taken */ 
+
+RUN;
+
+* 음주 변수 drop (15만개밖에 없음); 
+DATA zio.ukb_merged_1st_preprocessed; 
+SET zio.ukb_merged_1st_preprocessed; 
+DROP '20414-0.0'n; 
+RUN; 
+
+/* Calculate MET */ 
+/* '874-0.0'n  Duration of walks */ 
+/* '894-0.0'n  Duration of moderate activity */ 
+/* '914-0.0'n  Duration of vigorous activity */ 
+DATA zio.ukb_merged_1st_preprocessed; 
+SET zio.ukb_merged_1st_preprocessed; 
+
+IF '874-0.0'n ^= -1 AND '874-0.0'n ^= -3 THEN walk = '874-0.0'n;  
+IF '894-0.0'n ^= -1 AND '894-0.0'n ^= -3 THEN moderate = '894-0.0'n; 
+IF '914-0.0'n ^= -1 AND '914-0.0'n ^= -3 THEN vigorous = '914-0.0'n; 
+
+MET= vigorous*8 + moderate*4 + walk*3.3;
+
+IF MET<600 THEN PA_NEW=1;
+ELSE IF MET<=3000 THEN PA_NEW=2;
+ELSE IF MET>3000 THEN PA_NEW=3;
+
+DROP walk moderate vigorous; 
+
+RUN; 
+
+
+/* Family history */ 
+/*'20107-0.0'n '20107-0.1'n '20107-0.2'n '20107-0.3'n '20107-0.4'n '20107-0.5'n '20107-0.6'n '20107-0.7'n '20107-0.8'n '20107-0.9'n 
+'20107-1.0'n '20107-1.1'n '20107-1.2'n '20107-1.3'n '20107-1.4'n '20107-1.5'n '20107-1.6'n '20107-1.7'n '20107-1.8'n '20107-1.9'n 
+'20107-2.0'n '20107-2.1'n '20107-2.2'n '20107-2.3'n '20107-2.4'n '20107-2.5'n '20107-2.6'n '20107-2.7'n '20107-2.8'n '20107-2.9'n 
+'20107-3.0'n '20107-3.1'n '20107-3.2'n '20107-3.3'n '20107-3.4'n '20107-3.5'n '20107-3.6'n '20107-3.7'n '20107-3.8'n '20107-3.9'n  Illnesses of father */ 
+/*'20110-0.0'n '20110-0.1'n '20110-0.2'n '20110-0.3'n '20110-0.4'n '20110-0.5'n '20110-0.6'n '20110-0.7'n '20110-0.8'n '20110-0.9'n '20110-0.10'n
+'20110-1.0'n '20110-1.1'n '20110-1.2'n '20110-1.3'n '20110-1.4'n '20110-1.5'n '20110-1.6'n '20110-1.7'n '20110-1.8'n '20110-1.9'n '20110-1.10'n
+'20110-2.0'n '20110-2.1'n '20110-2.2'n '20110-2.3'n '20110-2.4'n '20110-2.5'n '20110-2.6'n '20110-2.7'n '20110-2.8'n '20110-2.9'n '20110-2.10'n
+'20110-3.0'n '20110-3.1'n '20110-3.2'n '20110-3.3'n '20110-3.4'n '20110-3.5'n '20110-3.6'n '20110-3.7'n '20110-3.8'n '20110-3.9'n '20110-3.10'n  Illnesses of mother */;  
+
+DATA zio.ukb_merged_1st_preprocessed; 
+SET zio.ukb_merged_1st_preprocessed; 
+* Father; 
+IF '20107-0.0'n = 1 OR '20107-0.1'n = 1 OR '20107-0.2'n = 1 OR '20107-0.3'n = 1 OR '20107-0.4'n = 1 OR 
+'20107-0.5'n = 1 OR '20107-0.6'n = 1 OR '20107-0.7'n = 1 OR '20107-0.8'n = 1 OR '20107-0.9'n = 1 THEN FM_HISTORY_Heart_disease = 1;   /* FM_HISTORY_Heart_disease coded 1 */ 
+IF '20107-0.0'n = 2 OR '20107-0.1'n = 2 OR '20107-0.2'n = 2 OR '20107-0.3'n = 2 OR '20107-0.4'n = 2 OR 
+'20107-0.5'n = 2 OR '20107-0.6'n = 2 OR '20107-0.7'n = 2 OR '20107-0.8'n = 2 OR '20107-0.9'n = 2 THEN FM_HISTORY_Stroke = 1;   /* FM_HISTORY_Stroke coded 2 */ 
+IF '20107-0.0'n = 8 OR '20107-0.1'n = 8 OR '20107-0.2'n = 8 OR '20107-0.3'n = 8 OR '20107-0.4'n = 8 OR 
+'20107-0.5'n = 8 OR '20107-0.6'n = 8 OR '20107-0.7'n = 8 OR '20107-0.8'n = 8 OR '20107-0.9'n = 8 THEN FM_HISTORY_High_blood_pressure = 1;   /* FM_HISTORY_High_blood_pressure coded 8 */ 
+IF '20107-0.0'n = 9 OR '20107-0.1'n = 9 OR '20107-0.2'n = 9 OR '20107-0.3'n = 9 OR '20107-0.4'n = 9 OR 
+'20107-0.5'n = 9 OR '20107-0.6'n = 9 OR '20107-0.7'n = 9 OR '20107-0.8'n = 9 OR '20107-0.9'n = 9 THEN FM_HISTORY_Diabetes = 1;   /* FM_HISTORY_Diabetes coded 9 */ 
+
+IF '20107-0.0'n = -17 OR '20107-0.1'n = -17 OR '20107-0.2'n = -17 OR '20107-0.3'n = -17 OR '20107-0.4'n = -17 OR 
+'20107-0.5'n = -17 OR '20107-0.6'n = -17 OR '20107-0.7'n = -17 OR '20107-0.8'n = -17 OR '20107-0.9'n = -17 THEN FM_HISTORY_Heart_disease = 0;  /* if coded -17, none of above */ 
+IF '20107-0.0'n = -17 OR '20107-0.1'n = -17 OR '20107-0.2'n = -17 OR '20107-0.3'n = -17 OR '20107-0.4'n = -17 OR 
+'20107-0.5'n = -17 OR '20107-0.6'n = -17 OR '20107-0.7'n = -17 OR '20107-0.8'n = -17 OR '20107-0.9'n = -17 THEN FM_HISTORY_Stroke = 0;  /* if coded -17, none of above */ 
+IF '20107-0.0'n = -17 OR '20107-0.1'n = -17 OR '20107-0.2'n = -17 OR '20107-0.3'n = -17 OR '20107-0.4'n = -17 OR 
+'20107-0.5'n = -17 OR '20107-0.6'n = -17 OR '20107-0.7'n = -17 OR '20107-0.8'n = -17 OR '20107-0.9'n = -17 THEN FM_HISTORY_High_blood_pressure = 0;  /* if coded -17, none of above */ 
+IF '20107-0.0'n = -17 OR '20107-0.1'n = -17 OR '20107-0.2'n = -17 OR '20107-0.3'n = -17 OR '20107-0.4'n = -17 OR 
+'20107-0.5'n = -17 OR '20107-0.6'n = -17 OR '20107-0.7'n = -17 OR '20107-0.8'n = -17 OR '20107-0.9'n = -17 THEN FM_HISTORY_Diabetes = 0;  /* if coded -17, none of above */ 
+
+IF '20107-0.0'n = -27 OR '20107-0.1'n = -27 OR '20107-0.2'n = -27 OR '20107-0.3'n = -27 OR '20107-0.4'n = -27 OR 
+'20107-0.5'n = -27 OR '20107-0.6'n = -27 OR '20107-0.7'n = -27 OR '20107-0.8'n = -27 OR '20107-0.9'n = -27 THEN FM_HISTORY_Heart_disease = 0;  /* if coded -27, none of above */ 
+IF '20107-0.0'n = -27 OR '20107-0.1'n = -27 OR '20107-0.2'n = -27 OR '20107-0.3'n = -27 OR '20107-0.4'n = -27 OR 
+'20107-0.5'n = -27 OR '20107-0.6'n = -27 OR '20107-0.7'n = -27 OR '20107-0.8'n = -27 OR '20107-0.9'n = -27 THEN FM_HISTORY_Stroke = 0;  /* if coded -27, none of above */ 
+IF '20107-0.0'n = -27 OR '20107-0.1'n = -27 OR '20107-0.2'n = -27 OR '20107-0.3'n = -27 OR '20107-0.4'n = -27 OR 
+'20107-0.5'n = -27 OR '20107-0.6'n = -27 OR '20107-0.7'n = -27 OR '20107-0.8'n = -27 OR '20107-0.9'n = -27 THEN FM_HISTORY_High_blood_pressure = 0;  /* if coded -27, none of above */ 
+IF '20107-0.0'n = -27 OR '20107-0.1'n = -27 OR '20107-0.2'n = -27 OR '20107-0.3'n = -27 OR '20107-0.4'n = -27 OR 
+'20107-0.5'n = -27 OR '20107-0.6'n = -27 OR '20107-0.7'n = -27 OR '20107-0.8'n = -27 OR '20107-0.9'n = -27 THEN FM_HISTORY_Diabetes = 0;  /* if coded -27, none of above */ 
+
+* Mother; 
+IF '20110-0.0'n = 1 OR '20110-0.1'n = 1 OR '20110-0.2'n = 1 OR '20110-0.3'n = 1 OR '20110-0.4'n = 1 OR 
+'20110-0.5'n = 1 OR '20110-0.6'n = 1 OR '20110-0.7'n = 1 OR '20110-0.8'n = 1 OR '20110-0.9'n = 1 OR '20110-0.10'n = 1 THEN FM_HISTORY_Heart_disease = 1;   /* FM_HISTORY_Heart_disease coded 1 */ 
+IF '20110-0.0'n = 2 OR '20110-0.1'n = 2 OR '20110-0.2'n = 2 OR '20110-0.3'n = 2 OR '20110-0.4'n = 2 OR 
+'20110-0.5'n = 2 OR '20110-0.6'n = 2 OR '20110-0.7'n = 2 OR '20110-0.8'n = 2 OR '20110-0.9'n = 2 OR '20110-0.10'n = 2 THEN FM_HISTORY_Stroke = 1;   /* FM_HISTORY_Stroke coded 2 */ 
+IF '20110-0.0'n = 8 OR '20110-0.1'n = 8 OR '20110-0.2'n = 8 OR '20110-0.3'n = 8 OR '20110-0.4'n = 8 OR 
+'20110-0.5'n = 8 OR '20110-0.6'n = 8 OR '20110-0.7'n = 8 OR '20110-0.8'n = 8 OR '20110-0.9'n = 8 OR '20110-0.10'n = 8 THEN FM_HISTORY_High_blood_pressure = 1;   /* FM_HISTORY_High_blood_pressure coded 8 */ 
+IF '20110-0.0'n = 9 OR '20110-0.1'n = 9 OR '20110-0.2'n = 9 OR '20110-0.3'n = 9 OR '20110-0.4'n = 9 OR 
+'20110-0.5'n = 9 OR '20110-0.6'n = 9 OR '20110-0.7'n = 9 OR '20110-0.8'n = 9 OR '20110-0.9'n = 9 OR '20110-0.10'n = 9 THEN FM_HISTORY_Diabetes = 1;   /* FM_HISTORY_Diabetes coded 9 */
+
+IF '20110-0.0'n = -17 OR '20110-0.1'n = -17 OR '20110-0.2'n = -17 OR '20110-0.3'n = -17 OR '20110-0.4'n = -17 OR 
+'20110-0.5'n = -17 OR '20110-0.6'n = -17 OR '20110-0.7'n = -17 OR '20110-0.8'n = -17 OR '20110-0.9'n = -17 OR '20110-0.10'n = -17 THEN FM_HISTORY_Heart_disease = 0;   /* if coded -17, none of above */ 
+IF '20110-0.0'n = -17 OR '20110-0.1'n = -17 OR '20110-0.2'n = -17 OR '20110-0.3'n = -17 OR '20110-0.4'n = -17 OR 
+'20110-0.5'n = -17 OR '20110-0.6'n = -17 OR '20110-0.7'n = -17 OR '20110-0.8'n = -17 OR '20110-0.9'n = -17 OR '20110-0.10'n = -17 THEN FM_HISTORY_Stroke = 0;   /* if coded -17, none of above */ 
+IF '20110-0.0'n = -17 OR '20110-0.1'n = -17 OR '20110-0.2'n = -17 OR '20110-0.3'n = -17 OR '20110-0.4'n = -17 OR 
+'20110-0.5'n = -17 OR '20110-0.6'n = -17 OR '20110-0.7'n = -17 OR '20110-0.8'n = -17 OR '20110-0.9'n = -17 OR '20110-0.10'n = -17 THEN FM_HISTORY_High_blood_pressure = 0;   /* if coded -17, none of above */ 
+IF '20110-0.0'n = -17 OR '20110-0.1'n = -17 OR '20110-0.2'n = -17 OR '20110-0.3'n = -17 OR '20110-0.4'n = -17 OR 
+'20110-0.5'n = -17 OR '20110-0.6'n = -17 OR '20110-0.7'n = -17 OR '20110-0.8'n = -17 OR '20110-0.9'n = -17 OR '20110-0.10'n = -17 THEN FM_HISTORY_Diabetes = 0;   /* if coded -17, none of above */ 
+
+IF '20110-0.0'n = -27 OR '20110-0.1'n = -27 OR '20110-0.2'n = -27 OR '20110-0.3'n = -27 OR '20110-0.4'n = -27 OR 
+'20110-0.5'n = -27 OR '20110-0.6'n = -27 OR '20110-0.7'n = -27 OR '20110-0.8'n = -27 OR '20110-0.9'n = -27 OR '20110-0.10'n = -27 THEN FM_HISTORY_Heart_disease = 0;   /* if coded -27, none of above */ 
+IF '20110-0.0'n = -27 OR '20110-0.1'n = -27 OR '20110-0.2'n = -27 OR '20110-0.3'n = -27 OR '20110-0.4'n = -27 OR 
+'20110-0.5'n = -27 OR '20110-0.6'n = -27 OR '20110-0.7'n = -27 OR '20110-0.8'n = -27 OR '20110-0.9'n = -27 OR '20110-0.10'n = -27 THEN FM_HISTORY_Stroke = 0;   /* if coded -27, none of above */ 
+IF '20110-0.0'n = -27 OR '20110-0.1'n = -27 OR '20110-0.2'n = -27 OR '20110-0.3'n = -27 OR '20110-0.4'n = -27 OR 
+'20110-0.5'n = -27 OR '20110-0.6'n = -27 OR '20110-0.7'n = -27 OR '20110-0.8'n = -27 OR '20110-0.9'n = -27 OR '20110-0.10'n = -27 THEN FM_HISTORY_High_blood_pressure = 0;   /* if coded -27, none of above */ 
+IF '20110-0.0'n = -27 OR '20110-0.1'n = -27 OR '20110-0.2'n = -27 OR '20110-0.3'n = -27 OR '20110-0.4'n = -27 OR 
+'20110-0.5'n = -27 OR '20110-0.6'n = -27 OR '20110-0.7'n = -27 OR '20110-0.8'n = -27 OR '20110-0.9'n = -27 OR '20110-0.10'n = -27 THEN FM_HISTORY_Diabetes = 0;   /* if coded -27, none of above */ 
+
+RUN; 
+
+
+
+
+
+
+
 
 
 
