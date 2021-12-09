@@ -66,7 +66,16 @@ DATA zio.UKB46987_new;
 SET biobank.UKB46987 (encoding=asciiany); 
 KEEP eid /* id */ 
 '41270-0.0'n--'41270-0.222'n  /* Diagnoses - ICD10 */ 
-'41280-0.0'n--'41280-0.222'n  /* Date of first in-patient diagnosis - ICD10 */ ; 
+'41280-0.0'n--'41280-0.222'n  /* Date of first in-patient diagnosis - ICD10 */; 
+RUN; 
+
+/* 2021-12-09 */ 
+/* UKB46987 Diagnoses ICD9 변수 table 새로 생성 */ 
+DATA zio.UKB46987_new_icd9; 
+SET biobank.UKB46987 (encoding=asciiany); 
+KEEP eid /* id */ 
+'41271-0.0'n--'41271-0.46'n  /* Diagnoses - ICD9 */ 
+'41281-0.0'n--'41281-0.46'n  /* Date of first in-patient diagnosis - ICD9 */ ; 
 RUN; 
 
 /* change UKB37332_new eid from character to numeric */ 
@@ -131,11 +140,11 @@ RUN;
 /* --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- */ 
 
 /* 2021-12-06 MON ~ 
-1. CKD 진단여부, CKD 진단날짜 전처리 - python에서 완료 - ukb46987_n18preprocessed.sas7bdat 
+1. CKD 진단여부, CKD 진단날짜 전처리 - python에서 완료 - ukb46987_n18preprocessed.sas7bdat (icd9 처리까지 완료) 
 2. 약물변수들 전처리 - python에서 완료 - ukb45783_drugpreprocessed.sas7bdat
-3. Date 변수들 모아서 last follow up 열 만들기 - python 에서 진행중 - 
-4. 최종 DF에서 1기만 추출하기
-5. 기본 검진변수들 전처리
+3. Date 변수들 모아서 last follow up 열 만들기 - python 에서 진행중 - 전부 character로만 바꿔서 다시 sas로 가져오자
+4. 최종 DF에서 1기만 추출하기 - 완료
+5. 기본 검진변수들 전처리 - sas에서 완료 - ukb_merged_1st_preprocessed.sass7bdat
 */ 
 
 * ukb37332 - Date 변수만 추출하기; 
@@ -239,11 +248,25 @@ QUIT;
 DATA zio.ukb_date_merged;
 SET zio.ukb_date_merged; 
 	eid_num = input(eid, 16.);
+	DROP eid; 
 RUN;
 
 /* find maximum date of all - 여기서부터 다시 */ * 자료형 다르고 열 너무 많아서 잘 안됨, python 으로 옮겨서 하자; 
-DATA zio.ukb_date_merged; 
-SET zio.ukb_date_merged; 
+* 파이썬에서도 노답임 자료형만 python에서 datetime으로 바꿔서 다시 불러오자; 
+
+data zio.ukb_date_merged_DATETIME2;
+   set zio.ukb_date_merged_DATETIME;
+   array change _character_;
+        do over change;
+            if change=' ' then change='1900-01-01';
+        end;
+ run ;
+
+PROC STDIZE DATA= zio.ukb_date_merged_DATETIME OUT=zio.ukb_date_merged_DATETIME2 REPONLY MISSING=0;
+RUN;
+
+DATA zio.ukb_date_merged_DATETIME2; 
+SET zio.ukb_date_merged_DATETIME2; 
 last_followup_date = max(of _character_); 
 RUN; 
 
@@ -374,6 +397,41 @@ IF '20110-0.0'n = -27 OR '20110-0.1'n = -27 OR '20110-0.2'n = -27 OR '20110-0.3'
 '20110-0.5'n = -27 OR '20110-0.6'n = -27 OR '20110-0.7'n = -27 OR '20110-0.8'n = -27 OR '20110-0.9'n = -27 OR '20110-0.10'n = -27 THEN FM_HISTORY_Diabetes = 0;   /* if coded -27, none of above */ 
 
 RUN; 
+
+
+/* 알아볼 수 있게 열 이름 바꾸기 */ 
+DATA zio.ukb_merged_1st_preprocessed; 
+SET zio.ukb_merged_1st_preprocessed; 
+RENAME '21003-0.0'n /* Age when attended assessment centre */ 
+'53-0.0'n  /* Date of attending assessment centre */ 
+'31-0.0'n /* sex */ 
+'50-0.0'n /* standing height */ 
+'21002-0.0'n /* weight */ 
+'21001-0.0'n  /* BMI */ 
+'4080-0.0'n '4080-0.1'n /* 	Systolic blood pressure, automated reading */ 
+'4079-0.0'n '4079-0.1'n /* 	Diastolic blood pressure, automated reading */ 
+'48-0.0'n  /* Waist circumference */ 
+'4056-0.0'n '4056-1.0'n '4056-2.0'n '4056-3.0'n /* Age stroke diagnosed */ 
+'3894-0.0'n '3894-1.0'n '3894-2.0'n '3894-3.0'n /* Age heart attack diagnosed */ 
+'3627-0.0'n '3627-1.0'n '3627-2.0'n '3627-3.0'n /* Age angina diagnosed */ 
+'2966-0.0'n '2966-1.0'n '2966-2.0'n '2966-3.0'n /* Age high blood pressure diagnosed */ 
+'2976-0.0'n '2976-1.0'n '2976-2.0'n '2976-3.0'n /* Age diabetes diagnosed */ 
+'6153-0.0'n '6153-0.1'n '6153-0.2'n '6153-0.3'n  /* Medication for cholesterol, blood pressure, diabetes, or take exogenous hormones */ 
+'6177-0.0'n '6177-0.1'n '6177-0.2'n  /* Medication for cholesterol, blood pressure or diabetes */ 
+'20414-0.0'n /* Frequency of drinking alcohol - 새로운 변수 받아와서 바꿔야 함! */ 
+'874-0.0'n /* Duration of walks */ 
+'894-0.0'n /* Duration of moderate activity */ 
+'914-0.0'n /* Duration of vigorous activity */ 
+'20107-0.0'n '20107-0.1'n '20107-0.2'n '20107-0.3'n '20107-0.4'n '20107-0.5'n '20107-0.6'n '20107-0.7'n '20107-0.8'n '20107-0.9'n  /* Illnesses of father */ 
+'20110-0.0'n '20110-0.1'n '20110-0.2'n '20110-0.3'n '20110-0.4'n '20110-0.5'n '20110-0.6'n '20110-0.7'n '20110-0.8'n '20110-0.9'n '20110-0.10'n /* Illnesses of mother */
+'30730-0.0'n /* Gamma glutamyltransferase */ 
+'30650-0.0'n /* Aspartate aminotransferase AST */ 
+'30620-0.0'n /* Alanine aminotransferase ALT */ 
+'30690-0.0'n /* Cholesterol */ 
+'30760-0.0'n /* HDL cholesterol */ 
+'30780-0.0'n /* LDL direct */ 
+'30870-0.0'n /* Triglycerides */ 
+'30700-0.0'n /* Creatinine */; 
 
 
 
