@@ -142,7 +142,7 @@ RUN;
 /* 2021-12-06 MON ~ 
 1. CKD 진단여부, CKD 진단날짜 전처리 - python에서 완료 - ukb46987_n18preprocessed.sas7bdat (icd9 처리까지 완료) 
 2. 약물변수들 전처리 - python에서 완료 - ukb45783_drugpreprocessed.sas7bdat
-3. Date 변수들 모아서 last follow up 열 만들기 - python 에서 진행중 - 전부 character로만 바꿔서 다시 sas로 가져오자
+3. Date 변수들 모아서 last follow up 열 만들기 - python 에서 진행중 - 전부 character로만 바꿔서 다시 sas로 가져오자 - python 에서 완료 - UKB_DATE_LASTFOLLOWUPDATE.sas7bdat
 4. 최종 DF에서 1기만 추출하기 - 완료
 5. 기본 검진변수들 전처리 - sas에서 완료 - ukb_merged_1st_preprocessed.sass7bdat
 */ 
@@ -258,12 +258,13 @@ data zio.ukb_date_merged_DATETIME2;
    set zio.ukb_date_merged_DATETIME;
    array change _character_;
         do over change;
-            if change=' ' then change='1900-01-01';
+			FORMAT _character_;   /* 이게 해결책이었음 (변수 길이) */ 
+            if change = ' ' then change = '1900-01-01';
         end;
- run ;
+ run ;  * null 값 다 채워지긴 한다, 이 파일을 파이썬으로 내보내서 nanmax 하자; * - 성공; 
 
-PROC STDIZE DATA= zio.ukb_date_merged_DATETIME OUT=zio.ukb_date_merged_DATETIME2 REPONLY MISSING=0;
-RUN;
+/*PROC STDIZE DATA= zio.ukb_date_merged_DATETIME OUT=zio.ukb_date_merged_DATETIME2 REPONLY MISSING=0;*/
+/*RUN; * 안됨; */
 
 DATA zio.ukb_date_merged_DATETIME2; 
 SET zio.ukb_date_merged_DATETIME2; 
@@ -273,6 +274,7 @@ RUN;
 
 /******** 기본 검진변수들 전처리 ********/
 /**** ukb_merged_1st.sas7bdat 에서 *****/ 
+
 
 * 6153 - 약물 복용력 (female) 변수들 질환별로 분리; 
 DATA zio.ukb_merged_1st_preprocessed; 
@@ -284,6 +286,8 @@ IF '31-0.0'n = 0 AND ('6153-0.0'n = 3 OR '6153-0.1'n = 3 OR '6153-0.2'n = 3 OR '
 IF '31-0.0'n = 0 AND ('6153-0.0'n = -7 OR '6153-0.1'n = -7 OR '6153-0.2'n = -7 OR '6153-0.3'n = -7) THEN Cholesterol_lowering_medication = 0;   /* if coded -7, none of above has been taken */ 
 IF '31-0.0'n = 0 AND ('6153-0.0'n = -7 OR '6153-0.1'n = -7 OR '6153-0.2'n = -7 OR '6153-0.3'n = -7) THEN Blood_pressure_medication = 0;   /* if coded -7, none of above has been taken */ 
 IF '31-0.0'n = 0 AND ('6153-0.0'n = -7 OR '6153-0.1'n = -7 OR '6153-0.2'n = -7 OR '6153-0.3'n = -7) THEN Insulin = 0;   /* if coded -7, none of above has been taken */ 
+
+DROP '6153-0.0'n--'6153-0.3'n; 
 
 RUN; 
 
@@ -297,6 +301,8 @@ IF '31-0.0'n = 1 AND ('6177-0.0'n = 3 OR '6177-0.1'n = 3 OR '6177-0.2'n = 3) THE
 IF '31-0.0'n = 1 AND ('6177-0.0'n = -7 OR '6177-0.1'n = -7 OR '6177-0.2'n = -7) THEN Cholesterol_lowering_medication = 0;   /* if coded -7, none of above has been taken */ 
 IF '31-0.0'n = 1 AND ('6177-0.0'n = -7 OR '6177-0.1'n = -7 OR '6177-0.2'n = -7) THEN Blood_pressure_medication = 0;   /* if coded -7, none of above has been taken */ 
 IF '31-0.0'n = 1 AND ('6177-0.0'n = -7 OR '6177-0.1'n = -7 OR '6177-0.2'n = -7) THEN Insulin = 0;   /* if coded -7, none of above has been taken */ 
+
+DROP '6177-0.0'n--'6177-0.2'n; 
 
 RUN;
 
@@ -323,7 +329,7 @@ IF MET<600 THEN PA_NEW=1;
 ELSE IF MET<=3000 THEN PA_NEW=2;
 ELSE IF MET>3000 THEN PA_NEW=3;
 
-DROP walk moderate vigorous; 
+DROP walk moderate vigorous '874-0.0'n '894-0.0'n '914-0.0'n; 
 
 RUN; 
 
@@ -396,63 +402,246 @@ IF '20110-0.0'n = -27 OR '20110-0.1'n = -27 OR '20110-0.2'n = -27 OR '20110-0.3'
 IF '20110-0.0'n = -27 OR '20110-0.1'n = -27 OR '20110-0.2'n = -27 OR '20110-0.3'n = -27 OR '20110-0.4'n = -27 OR 
 '20110-0.5'n = -27 OR '20110-0.6'n = -27 OR '20110-0.7'n = -27 OR '20110-0.8'n = -27 OR '20110-0.9'n = -27 OR '20110-0.10'n = -27 THEN FM_HISTORY_Diabetes = 0;   /* if coded -27, none of above */ 
 
+DROP '20107-0.0'n '20107-0.1'n '20107-0.2'n '20107-0.3'n '20107-0.4'n '20107-0.5'n '20107-0.6'n '20107-0.7'n '20107-0.8'n '20107-0.9'n 
+'20107-1.0'n '20107-1.1'n '20107-1.2'n '20107-1.3'n '20107-1.4'n '20107-1.5'n '20107-1.6'n '20107-1.7'n '20107-1.8'n '20107-1.9'n 
+'20107-2.0'n '20107-2.1'n '20107-2.2'n '20107-2.3'n '20107-2.4'n '20107-2.5'n '20107-2.6'n '20107-2.7'n '20107-2.8'n '20107-2.9'n 
+'20107-3.0'n '20107-3.1'n '20107-3.2'n '20107-3.3'n '20107-3.4'n '20107-3.5'n '20107-3.6'n '20107-3.7'n '20107-3.8'n '20107-3.9'n ; * Illnesses of father; 
+
+DROP '20110-0.0'n '20110-0.1'n '20110-0.2'n '20110-0.3'n '20110-0.4'n '20110-0.5'n '20110-0.6'n '20110-0.7'n '20110-0.8'n '20110-0.9'n '20110-0.10'n
+'20110-1.0'n '20110-1.1'n '20110-1.2'n '20110-1.3'n '20110-1.4'n '20110-1.5'n '20110-1.6'n '20110-1.7'n '20110-1.8'n '20110-1.9'n '20110-1.10'n
+'20110-2.0'n '20110-2.1'n '20110-2.2'n '20110-2.3'n '20110-2.4'n '20110-2.5'n '20110-2.6'n '20110-2.7'n '20110-2.8'n '20110-2.9'n '20110-2.10'n
+'20110-3.0'n '20110-3.1'n '20110-3.2'n '20110-3.3'n '20110-3.4'n '20110-3.5'n '20110-3.6'n '20110-3.7'n '20110-3.8'n '20110-3.9'n '20110-3.10'n; * Illnesses of mother; 
+
 RUN; 
 
+* 2021.12.10 FRI ~ 추가 기본 검진변수 전처리; 
+* SBP, DBP; 
+DATA zio.ukb_merged_1st_preprocessed; 
+SET zio.ukb_merged_1st_preprocessed; 
+* SBP; 
+IF '4080-0.0'n = . AND '4080-0.1'n = . THEN SBP = . ; 
+IF '4080-0.0'n ^= . AND '4080-0.1'n =. THEN SBP = '4080-0.0'n; 
+IF '4080-0.0'n = . AND '4080-0.1'n ^=. THEN SBP = '4080-0.1'n; 
+IF '4080-0.0'n ^= . AND '4080-0.1'n ^=. THEN SBP = MEAN('4080-0.0'n, '4080-0.1'n) ; 
+
+* DBP; 
+IF '4079-0.0'n = . AND '4079-0.1'n = . THEN DBP = . ; 
+IF '4079-0.0'n ^= . AND '4079-0.1'n =. THEN DBP = '4079-0.0'n; 
+IF '4079-0.0'n = . AND '4079-0.1'n ^=. THEN DBP = '4079-0.1'n; 
+IF '4079-0.0'n ^= . AND '4079-0.1'n ^=. THEN DBP = MEAN('4079-0.0'n, '4079-0.1'n) ; 
+
+DROP '4080-0.0'n '4080-0.1'n '4079-0.0'n '4079-0.1'n; 
+RUN; 
+
+* 과거 진단력 관련 변수들 하나로 합치기 (질환력, 약물복용력) ; 
+DATA zio.ukb_merged_1st_preprocessed; 
+SET zio.ukb_merged_1st_preprocessed; 
+* Stroke; 
+IF '4056-0.0'n ^= . THEN Stroke_diagnosed = 1; 
+IF '4056-0.0'n = . THEN Stroke_diagnosed = 0; 
+* Heart_disease; 
+IF '3894-0.0'n ^= . OR '3627-0.0'n ^= . THEN Heart_disease_diagnosed = 1; *Heart attack, angina; 
+IF '3894-0.0'n = . AND '3627-0.0'n = . THEN Heart_disease_diagnosed = 0; 
+*High_Blood_Pressure; 
+IF '2966-0.0'n ^= . OR Blood_pressure_medication = 1 THEN High_Blood_Pressure_diagnosed = 1; 
+IF '2966-0.0'n = . OR Blood_pressure_medication = 0 THEN High_Blood_Pressure_diagnosed = 0; 
+*Diabetes; 
+IF '2976-0.0'n ^= . OR Insulin = 1 THEN Diabetes_diagnosed = 1; 
+IF '2976-0.0'n = . OR Insulin = 0 THEN Diabetes_diagnosed = 0; 
+*High_Cholesterol; 
+IF Cholesterol_lowering_medication = 1 THEN High_Cholesterol_diagnosed = 1; 
+IF Cholesterol_lowering_medication = 0 THEN High_Cholesterol_diagnosed = 0; 
+
+* 약물변수 참고용 (실제 코드 위에 있음); 
+/*IF '31-0.0'n = 0 AND ('6153-0.0'n = -7 OR '6153-0.1'n = -7 OR '6153-0.2'n = -7 OR '6153-0.3'n = -7) THEN Cholesterol_lowering_medication = 0;   /* if coded -7, none of above has been taken */ */
+/*IF '31-0.0'n = 0 AND ('6153-0.0'n = -7 OR '6153-0.1'n = -7 OR '6153-0.2'n = -7 OR '6153-0.3'n = -7) THEN Blood_pressure_medication = 0;   /* if coded -7, none of above has been taken */ */
+/*IF '31-0.0'n = 0 AND ('6153-0.0'n = -7 OR '6153-0.1'n = -7 OR '6153-0.2'n = -7 OR '6153-0.3'n = -7) THEN Insulin = 0;   /* if coded -7, none of above has been taken */
+
+DROP '4056-0.0'n--'4056-3.0'n; 
+DROP '3894-0.0'n--'3894-3.0'n; 
+DROP '3627-0.0'n--'3627-3.0'n; 
+DROP '2966-0.0'n--'2966-3.0'n; 
+DROP '2976-0.0'n--'2976-3.0'n; 
+
+RUN; 
+
+
+* BMI, MET, Total cholesterol drop; 
+DATA zio.ukb_merged_1st_preprocessed; 
+SET zio.ukb_merged_1st_preprocessed; 
+DROP '21001-0.0'n MET '30690-0.0'n; 
+RUN; 
+
+/* 검진변수 전처리 END */ 
+/* ------------------------------------------------------------------------------------------------------------------------------------------------------------------- */ 
+
+
+/* 2021-12-10 FRI ~ 
+
+- 최종 DF들 합쳐서 final df 만들기 (1~4) - ukb_1st_final.sas7bdat
+	1. CKD 진단여부, CKD 진단날짜 - ukb46987_n18preprocessed.sas7bdat (icd9 처리까지 완료) 
+	2. 약물변수들 전처리 완료 - ukb45783_drugpreprocessed.sas7bdat
+	3. Date 변수들 모아서 만든 last follow up date - UKB_DATE_LASTFOLLOWUPDATE.sas7bdat
+	4. 기본 검진변수들 전처리 완료 - ukb_merged_1st_preprocessed.sas7bdat
+
+- TIME 변수 생성
+	IF N18 = 1 THEN TIME = N18_Date - ATTEND_DATE
+	IF N18 = 0 THEN TIME = LastFollowUpDate - ATTEND_DATE
+
+- CHECK Missing
+
+*/ 
 
 /* 알아볼 수 있게 열 이름 바꾸기 */ 
 DATA zio.ukb_merged_1st_preprocessed; 
 SET zio.ukb_merged_1st_preprocessed; 
-RENAME '21003-0.0'n /* Age when attended assessment centre */ 
-'53-0.0'n  /* Date of attending assessment centre */ 
-'31-0.0'n /* sex */ 
-'50-0.0'n /* standing height */ 
-'21002-0.0'n /* weight */ 
-'21001-0.0'n  /* BMI */ 
-'4080-0.0'n '4080-0.1'n /* 	Systolic blood pressure, automated reading */ 
-'4079-0.0'n '4079-0.1'n /* 	Diastolic blood pressure, automated reading */ 
-'48-0.0'n  /* Waist circumference */ 
-'4056-0.0'n '4056-1.0'n '4056-2.0'n '4056-3.0'n /* Age stroke diagnosed */ 
-'3894-0.0'n '3894-1.0'n '3894-2.0'n '3894-3.0'n /* Age heart attack diagnosed */ 
-'3627-0.0'n '3627-1.0'n '3627-2.0'n '3627-3.0'n /* Age angina diagnosed */ 
-'2966-0.0'n '2966-1.0'n '2966-2.0'n '2966-3.0'n /* Age high blood pressure diagnosed */ 
-'2976-0.0'n '2976-1.0'n '2976-2.0'n '2976-3.0'n /* Age diabetes diagnosed */ 
-'6153-0.0'n '6153-0.1'n '6153-0.2'n '6153-0.3'n  /* Medication for cholesterol, blood pressure, diabetes, or take exogenous hormones */ 
-'6177-0.0'n '6177-0.1'n '6177-0.2'n  /* Medication for cholesterol, blood pressure or diabetes */ 
-'20414-0.0'n /* Frequency of drinking alcohol - 새로운 변수 받아와서 바꿔야 함! */ 
-'874-0.0'n /* Duration of walks */ 
-'894-0.0'n /* Duration of moderate activity */ 
-'914-0.0'n /* Duration of vigorous activity */ 
-'20107-0.0'n '20107-0.1'n '20107-0.2'n '20107-0.3'n '20107-0.4'n '20107-0.5'n '20107-0.6'n '20107-0.7'n '20107-0.8'n '20107-0.9'n  /* Illnesses of father */ 
-'20110-0.0'n '20110-0.1'n '20110-0.2'n '20110-0.3'n '20110-0.4'n '20110-0.5'n '20110-0.6'n '20110-0.7'n '20110-0.8'n '20110-0.9'n '20110-0.10'n /* Illnesses of mother */
-'30730-0.0'n /* Gamma glutamyltransferase */ 
-'30650-0.0'n /* Aspartate aminotransferase AST */ 
-'30620-0.0'n /* Alanine aminotransferase ALT */ 
-'30690-0.0'n /* Cholesterol */ 
-'30760-0.0'n /* HDL cholesterol */ 
-'30780-0.0'n /* LDL direct */ 
-'30870-0.0'n /* Triglycerides */ 
-'30700-0.0'n /* Creatinine */; 
+RENAME '21003-0.0'n = AGE /* Age when attended assessment centre */
+'53-0.0'n  = ATTEND_DATE /* Date of attending assessment centre */ 
+'31-0.0'n = SEX /* sex */ 
+'50-0.0'n = HGHT /* standing height */ 
+'21002-0.0'n = WGHT /* weight */ 
+/*'21001-0.0'n  = BMI /* BMI - DROP */ 
+/*'4080-0.0'n '4080-0.1'n /* Systolic blood pressure, automated reading - SBP 열 새로 생성 */ 
+/*'4079-0.0'n '4079-0.1'n /* 	Diastolic blood pressure, automated reading - DBP 열 새로 생성 */ 
+'48-0.0'n  = WSTC /* Waist circumference */ 
+/*'4056-0.0'n '4056-1.0'n '4056-2.0'n '4056-3.0'n /* Age stroke diagnosed */ 
+/*'3894-0.0'n '3894-1.0'n '3894-2.0'n '3894-3.0'n /* Age heart attack diagnosed */ 
+/*'3627-0.0'n '3627-1.0'n '3627-2.0'n '3627-3.0'n /* Age angina diagnosed */
+/*'2966-0.0'n '2966-1.0'n '2966-2.0'n '2966-3.0'n /* Age high blood pressure diagnosed */ 
+/*'2976-0.0'n '2976-1.0'n '2976-2.0'n '2976-3.0'n /* Age diabetes diagnosed */
+/*'6153-0.0'n '6153-0.1'n '6153-0.2'n '6153-0.3'n  /* Medication for cholesterol, blood pressure, diabetes, or take exogenous hormones */ 
+/*'6177-0.0'n '6177-0.1'n '6177-0.2'n  /* Medication for cholesterol, blood pressure or diabetes  - 약물력, 질환력 다 합쳤음 */ 
+/*'20414-0.0'n /* Frequency of drinking alcohol - 새로운 변수 받아와서 바꿔야 함! - DROP */ 
+/*'874-0.0'n /* Duration of walks */ 
+/*'894-0.0'n /* Duration of moderate activity */ 
+/*'914-0.0'n /* Duration of vigorous activity - 3개 합쳐서 PA_NEW로 대체 */ 
+/*'20107-0.0'n '20107-0.1'n '20107-0.2'n '20107-0.3'n '20107-0.4'n '20107-0.5'n '20107-0.6'n '20107-0.7'n '20107-0.8'n '20107-0.9'n  /* Illnesses of father - 전처리 완료 */ 
+/*'20110-0.0'n '20110-0.1'n '20110-0.2'n '20110-0.3'n '20110-0.4'n '20110-0.5'n '20110-0.6'n '20110-0.7'n '20110-0.8'n '20110-0.9'n '20110-0.10'n /* Illnesses of mother - 전처리 완료 */
+'30730-0.0'n = GGT /* Gamma glutamyltransferase */ 
+'30650-0.0'n = AST /* Aspartate aminotransferase AST */ 
+'30620-0.0'n = ALT /* Alanine aminotransferase ALT */ 
+/*'30690-0.0'n /* Cholesterol - high VIF, DROP */ 
+'30760-0.0'n = HDL /* HDL cholesterol */ 
+'30780-0.0'n = LDL /* LDL direct */ 
+'30870-0.0'n = TG /* Triglycerides */ 
+'30700-0.0'n = CREA /* Creatinine */; 
+RUN; 
+
+/* UKB45783_DRUGPREPROCESSED에서 eid, HTN_med만 남기기 */ 
+DATA zio.UKB45783_DRUGPREPROCESSED; 
+SET zio.UKB45783_DRUGPREPROCESSED; 
+KEEP eid HTN_med; 
+RUN; 
+
+/* 1 + 2 eid로 join */ 
+PROC SQL; 
+CREATE TABLE zio.UKB_1st_final AS 
+SELECT *
+FROM zio.ukb46987_n18preprocessed AS a INNER JOIN zio.ukb45783_drugpreprocessed AS b 
+ON a.eid = b.eid; 
+QUIT; 
+
+/* + 3 eid로 join */ 
+PROC SQL; 
+CREATE TABLE zio.UKB_1st_final AS 
+SELECT *
+FROM zio.UKB_1st_final AS a INNER JOIN zio.UKB_DATE_LASTFOLLOWUPDATE AS b 
+ON a.eid = b.eid; 
+QUIT; 
+
+/* + 4 eid로 join */ 
+PROC SQL; 
+CREATE TABLE zio.UKB_1st_final AS 
+SELECT *
+FROM zio.ukb_merged_1st_preprocessed AS a INNER JOIN zio.UKB_1st_final AS b 
+ON a.eid = b.eid; 
+QUIT; 
+
+/* create TIME */ 
+
+* N18_Date - 0 to null; 
+DATA zio.UKB_1st_final; 
+SET zio.UKB_1st_final; 
+IF N18_Date = 0 THEN N18_Date = ' '; 
+RUN; 
+
+* N18_Date - character to datetime; 
+DATA zio.UKB_1st_final; 
+SET zio.UKB_1st_final; 
+N18_Date_new = input(put(N18_Date,10.),yymmdd10.);
+format N18_Date_new yymmdd10.; 
+RUN; 
+
+* TIME; 
+DATA zio.UKB_1st_final; 
+SET zio.UKB_1st_final; 
+	IF N18 = 1 THEN TIME = intck('day', ATTEND_DATE, N18_Date_new);
+	IF N18 = 0 THEN TIME = intck('day', ATTEND_DATE, LastFollowUpDate); 
+RUN; 
 
 
+/* 자잘한 전처리들 */ 
+* IF TIME < 0 THEN DROP; 
+DATA zio.UKB_1ST_FINAL; 
+SET zio.UKB_1ST_FINAL; 
+IF TIME <0 THEN delete; 
+RUN; 
+
+* change some character variables to numeric; 
+DATA zio.UKB_1ST_FINAL; 
+SET zio.UKB_1ST_FINAL; 
+ALT_num = INPUT(ALT, 8.); 
+AST_num = INPUT(AST, 8.); 
+CREA_num = INPUT(CREA, 8.); 
+GGT_num = INPUT(GGT, 8.); 
+HDL_num = INPUT(HDL, 8.); 
+LDL_num = INPUT(LDL, 8.); 
+TG_num = INPUT(TG, 8.); 
+
+DROP ALT AST CREA GGT HDL LDL TG; 
+
+RUN; 
+
+* DROP unused variables; 
+DATA zio.UKB_1ST_FINAL; 
+SET zio.UKB_1ST_FINAL; 
+DROP Cholesterol_lowering_medication Blood_pressure_medication Insulin N18_Date; 
+RUN; 
 
 
+/* CHECK Missing */ 
+proc means data=zio.ukb_1st_final mean median min max n nmiss; 
+run; 
 
 
+/* DROP Missing */ 
+DATA zio.UKB_1ST_FINAL; 
+SET zio.UKB_1ST_FINAL; 
+IF WSTC = . THEN delete; 
+IF HGHT = . THEN delete; 
+IF WGHT = . THEN delete; 
+IF FM_HISTORY_Heart_disease = . THEN delete; 
+IF FM_HISTORY_Stroke = . THEN delete; 
+IF FM_HISTORY_High_blood_pressure = . THEN delete; 
+IF FM_HISTORY_Diabetes = . THEN delete; 
+IF SBP = . THEN delete; 
+IF DBP = . THEN delete; 
+IF High_Cholesterol_diagnosed = . THEN delete; 
+IF ALT_num = . THEN delete; 
+IF AST_num = . THEN delete; 
+IF CREA_num = . THEN delete; 
+IF GGT_num = . THEN delete; 
+IF HDL_num = . THEN delete; 
+IF LDL_num = . THEN delete; 
+IF TG_num = . THEN delete; 
+RUN; 
 
 
+/* Count Outcome */ 
+proc freq data=zio.ukb_1st_final; 
+tables HTN_med * N18; 
+RUN; 
 
-
-
-
-
-
-
-
-
-
-
-
- 
-
-
-
+/* ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- */ 
+/* UKB_1ST_FINAL.sas7bdat preprocessing DONE. */ 
+/* Move to PSM program */ 
