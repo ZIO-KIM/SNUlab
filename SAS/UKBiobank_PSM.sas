@@ -26,20 +26,20 @@ proc psmatch data=zio.ukb_1st_final_HBP;
 	psmodel HTN_med(Treated='1')= WSTC HGHT AGE SBP DBP ALT_num AST_num CREA_num GGT_num HDL_num LDL_num TG_num SEX PA_NEW FM_HISTORY_Heart_disease FM_HISTORY_Stroke 
 	FM_HISTORY_High_blood_pressure FM_HISTORY_Diabetes Stroke_diagnosed Heart_disease_diagnosed Diabetes_diagnosed High_Cholesterol_diagnosed;
 
-	match method=optimal(k=1) stat=lps caliper=0.25;
+	match method=greedy(k=1) stat=lps caliper=0.25;
 
 	assess lps var=(WSTC HGHT AGE SBP DBP ALT_num AST_num CREA_num GGT_num HDL_num LDL_num TG_num SEX PA_NEW FM_HISTORY_Heart_disease FM_HISTORY_Stroke 
 	FM_HISTORY_High_blood_pressure FM_HISTORY_Diabetes Stroke_diagnosed Heart_disease_diagnosed Diabetes_diagnosed High_Cholesterol_diagnosed) 
 	/ weight=none plots=(boxplot barchart);
 
-	output out(obs=match)=zio.Outgs_UKB_HBP_optimal lps=_Lps matchid=_MatchID;
+	output out(obs=match)=zio.Outgs_UKB_HBP lps=_Lps matchid=_MatchID;
 run;
 
 ods graphics on; 
 proc phreg data=zio.Outgs_UKB_HBP plot(overlay)=survival; 
 
 	class SEX PA_NEW FM_HISTORY_Heart_disease FM_HISTORY_Stroke FM_HISTORY_High_blood_pressure FM_HISTORY_Diabetes Stroke_diagnosed Heart_disease_diagnosed  
-	Diabetes_diagnosed High_Cholesterol_diagnosed HTN_med;
+	Diabetes_diagnosed High_Cholesterol_diagnosed HTN_med(ref='0');
 
 	model TIME*N18(0) = WSTC HGHT AGE SBP DBP ALT_num AST_num CREA_num GGT_num HDL_num LDL_num TG_num SEX PA_NEW FM_HISTORY_Heart_disease FM_HISTORY_Stroke 
 	FM_HISTORY_High_blood_pressure FM_HISTORY_Diabetes Stroke_diagnosed Heart_disease_diagnosed Diabetes_diagnosed High_Cholesterol_diagnosed HTN_med; 
@@ -80,7 +80,7 @@ ods graphics on;
 proc phreg data=zio.Outgs_UKB_HBP_ARBACEI plot(overlay)=survival; 
 
 	class SEX PA_NEW FM_HISTORY_Heart_disease FM_HISTORY_Stroke FM_HISTORY_High_blood_pressure FM_HISTORY_Diabetes Stroke_diagnosed Heart_disease_diagnosed  
-	Diabetes_diagnosed High_Cholesterol_diagnosed ARB_ACEi;
+	Diabetes_diagnosed High_Cholesterol_diagnosed ARB_ACEi(ref='0');
 
 	model TIME*N18(0) = WSTC HGHT AGE SBP DBP ALT_num AST_num CREA_num GGT_num HDL_num LDL_num TG_num SEX PA_NEW FM_HISTORY_Heart_disease FM_HISTORY_Stroke 
 	FM_HISTORY_High_blood_pressure FM_HISTORY_Diabetes Stroke_diagnosed Heart_disease_diagnosed Diabetes_diagnosed High_Cholesterol_diagnosed ARB_ACEi; 
@@ -90,9 +90,9 @@ run;
 /* ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- */ 
 
 
-/* 약을 아예 안 먹은 사람 / ARB_ACEi 먹은 사람 기준으로 PS Match */ 
+/* Other_HTN_med 먹은 사람 / ARB_ACEi 먹은 사람 기준으로 PS Match */ 
 * 변수 ARB_ACEi2; 
-* ARB_ACEi와 Other_HTN_med 둘 다 먹은 사람 자름, optimal로 변경; 
+* ARB_ACEi와 Other_HTN_med 둘 다 먹은 사람 자름; 
 
 /* PS Match */ 
 ods graphics on;
@@ -103,7 +103,7 @@ proc psmatch data=zio.ukb_1st_final_dropdup;
 	psmodel ARB_ACEi2(Treated='1')= WSTC HGHT AGE SBP DBP ALT_num AST_num CREA_num GGT_num HDL_num LDL_num TG_num SEX PA_NEW FM_HISTORY_Heart_disease FM_HISTORY_Stroke 
 	FM_HISTORY_High_blood_pressure FM_HISTORY_Diabetes Stroke_diagnosed Heart_disease_diagnosed Diabetes_diagnosed High_Cholesterol_diagnosed;
 
-	match method=optimal(k=1) stat=lps caliper=0.3;
+	match method=greedy(k=1) stat=lps caliper=0.3;
 
 	assess lps var=(WSTC HGHT AGE SBP DBP ALT_num AST_num CREA_num GGT_num HDL_num LDL_num TG_num SEX PA_NEW FM_HISTORY_Heart_disease FM_HISTORY_Stroke 
 	FM_HISTORY_High_blood_pressure FM_HISTORY_Diabetes Stroke_diagnosed Heart_disease_diagnosed Diabetes_diagnosed High_Cholesterol_diagnosed) 
@@ -116,7 +116,7 @@ ods graphics on;
 proc phreg data=zio.Outgs_UKB_HBP_ARBACEI2 plot(overlay)=survival; 
 
 	class SEX PA_NEW FM_HISTORY_Heart_disease FM_HISTORY_Stroke FM_HISTORY_High_blood_pressure FM_HISTORY_Diabetes Stroke_diagnosed Heart_disease_diagnosed  
-	Diabetes_diagnosed High_Cholesterol_diagnosed ARB_ACEi2;
+	Diabetes_diagnosed High_Cholesterol_diagnosed ARB_ACEi2(ref='0');
 
 	model TIME*N18(0) = WSTC HGHT AGE SBP DBP ALT_num AST_num CREA_num GGT_num HDL_num LDL_num TG_num SEX PA_NEW FM_HISTORY_Heart_disease FM_HISTORY_Stroke 
 	FM_HISTORY_High_blood_pressure FM_HISTORY_Diabetes Stroke_diagnosed Heart_disease_diagnosed Diabetes_diagnosed High_Cholesterol_diagnosed ARB_ACEi2; 
@@ -153,7 +153,7 @@ ods graphics on;
 proc phreg data=zio.Outgs_UKB_HBP_Other plot(overlay)=survival; 
 
 	class SEX PA_NEW FM_HISTORY_Heart_disease FM_HISTORY_Stroke FM_HISTORY_High_blood_pressure FM_HISTORY_Diabetes Stroke_diagnosed Heart_disease_diagnosed  
-	Diabetes_diagnosed High_Cholesterol_diagnosed HTN_med;
+	Diabetes_diagnosed High_Cholesterol_diagnosed HTN_med(ref='0');
 
 	model TIME*N18(0) = WSTC HGHT AGE SBP DBP ALT_num AST_num CREA_num GGT_num HDL_num LDL_num TG_num SEX PA_NEW FM_HISTORY_Heart_disease FM_HISTORY_Stroke 
 	FM_HISTORY_High_blood_pressure FM_HISTORY_Diabetes Stroke_diagnosed Heart_disease_diagnosed Diabetes_diagnosed High_Cholesterol_diagnosed HTN_med; 
@@ -163,7 +163,45 @@ run;
 /* ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- */ 
 
 
+/* 약을 아예 안 먹은 사람 / ARB_ACEi 먹은 사람 기준으로 PS Match */ 
+* 변수 ARB_ACEi3 : 1 if ARB_ACEi = 1 / 0 if HTN_med = 0 ; 
 
+data zio.ukb_1st_final_ARBACEi_3; 
+set zio.ukb_1st_final; 
+ARB_ACEi3 =  HTN_med; 
+if Other_HTN_med = 1 then delete; 
+run; 
+
+/* PS Match */ 
+ods graphics on;
+proc psmatch data=zio.ukb_1st_final_ARBACEi_3;
+	class SEX PA_NEW FM_HISTORY_Heart_disease FM_HISTORY_Stroke FM_HISTORY_High_blood_pressure FM_HISTORY_Diabetes Stroke_diagnosed Heart_disease_diagnosed
+	Diabetes_diagnosed High_Cholesterol_diagnosed ARB_ACEi3;
+
+	psmodel ARB_ACEi3(Treated='1')= WSTC HGHT AGE SBP DBP ALT_num AST_num CREA_num GGT_num HDL_num LDL_num TG_num SEX PA_NEW FM_HISTORY_Heart_disease FM_HISTORY_Stroke 
+	FM_HISTORY_High_blood_pressure FM_HISTORY_Diabetes Stroke_diagnosed Heart_disease_diagnosed Diabetes_diagnosed High_Cholesterol_diagnosed;
+
+	match method=greedy(k=1) stat=lps caliper=0.25;
+
+	assess lps var=(WSTC HGHT AGE SBP DBP ALT_num AST_num CREA_num GGT_num HDL_num LDL_num TG_num SEX PA_NEW FM_HISTORY_Heart_disease FM_HISTORY_Stroke 
+	FM_HISTORY_High_blood_pressure FM_HISTORY_Diabetes Stroke_diagnosed Heart_disease_diagnosed Diabetes_diagnosed High_Cholesterol_diagnosed) 
+	/ weight=none plots=(boxplot barchart);
+
+	output out(obs=match)=zio.Outgs_UKB_ARBACEi_3 lps=_Lps matchid=_MatchID;
+run;
+
+ods graphics on; 
+proc phreg data=zio.Outgs_UKB_ARBACEi_3 plot(overlay)=survival; 
+
+	class SEX PA_NEW FM_HISTORY_Heart_disease FM_HISTORY_Stroke FM_HISTORY_High_blood_pressure FM_HISTORY_Diabetes Stroke_diagnosed Heart_disease_diagnosed  
+	Diabetes_diagnosed High_Cholesterol_diagnosed ARB_ACEi3(ref='0');
+
+	model TIME*N18(0) = WSTC HGHT AGE SBP DBP ALT_num AST_num CREA_num GGT_num HDL_num LDL_num TG_num SEX PA_NEW FM_HISTORY_Heart_disease FM_HISTORY_Stroke 
+	FM_HISTORY_High_blood_pressure FM_HISTORY_Diabetes Stroke_diagnosed Heart_disease_diagnosed Diabetes_diagnosed High_Cholesterol_diagnosed ARB_ACEi3; 
+
+run; 
+
+/* ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- */ 
 
 
 
