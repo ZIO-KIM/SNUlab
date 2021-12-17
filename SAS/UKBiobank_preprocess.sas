@@ -655,14 +655,6 @@ SET zio.ukb_1st_final;
 IF ARB = 1 OR ACEi = 1 THEN ARB_ACEi = 1; 
 RUN; 
 
-* HTN_med = 1, High_Blood_Pressure_diagnosed = 1인 테이블 생성; 
-PROC SQL;
-CREATE TABLE zio.ukb_1st_final_HBP_med AS 
-SELECT *
-FROM zio.ukb_1st_final
-WHERE HTN_med = 1 AND High_Blood_Pressure_diagnosed = 1; 
-QUIT; 
-
 * ARB_ACEi - null to 0; 
 DATA zio.ukb_1st_final_HBP_med; 
 SET zio.ukb_1st_final_HBP_med; 
@@ -678,6 +670,9 @@ RUN;
 /* UKB_1ST_FINAL.sas7bdat preprocessing DONE. */ 
 /* Move to PSM program */ 
 
+proc freq data=zio.ukb_1st_final; 
+table N18; 
+run; 
 
 data zio.ukb_1st_final_new;
 set zio.ukb_1st_final;
@@ -751,3 +746,8 @@ QUIT;
 proc means data=work.ukb_other_htn_med mean median min max n nmiss; 
 run;
 
+
+proc export data=zio.ukb_1st_final
+    outfile="D:\SNUlab\SAS\ukb_1st_final.csv"
+    dbms=csv;
+run;
