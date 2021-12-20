@@ -481,6 +481,8 @@ RUN;
 - 최종 DF들 합쳐서 final df 만들기 (1~4) - ukb_1st_final.sas7bdat
 	1. CKD 진단여부, CKD 진단날짜 - ukb46987_n18preprocessed.sas7bdat (icd9 처리까지 완료) 
 	2. 약물변수들 전처리 완료 - ukb45783_drugpreprocessed.sas7bdat
+		2-1. 2021-12-13 약물변수 기준 확대 - 약학정보원기준
+		ukb45783_drugpreprocessed_약학정보원기준.csv == ukb45783_drugpreprocessed_2.sas7bdat
 	3. Date 변수들 모아서 만든 last follow up date - UKB_DATE_LASTFOLLOWUPDATE.sas7bdat
 	4. 기본 검진변수들 전처리 완료 - ukb_merged_1st_preprocessed.sas7bdat
 
@@ -528,16 +530,18 @@ RENAME '21003-0.0'n = AGE /* Age when attended assessment centre */
 RUN; 
 
 /* UKB45783_DRUGPREPROCESSED에서 eid, HTN_med만 남기기 */ 
+/* 약학정보원 기준으로 만든 UKB45783_DRUGPREPROCESSED_2로 작업할 경우 실행 안해도 됨 */ 
 DATA zio.UKB45783_DRUGPREPROCESSED; 
 SET zio.UKB45783_DRUGPREPROCESSED; 
 KEEP eid HTN_med; 
 RUN; 
 
 /* 1 + 2 eid로 join */ 
+* 약물df 이름 약학정보원 기준, 공단 기준 달라질 때 바꾸는 거 잊지말기; 
 PROC SQL; 
 CREATE TABLE zio.UKB_1st_final AS 
 SELECT *
-FROM zio.ukb46987_n18preprocessed AS a INNER JOIN zio.ukb45783_drugpreprocessed AS b 
+FROM zio.ukb46987_n18preprocessed AS a INNER JOIN zio.ukb45783_drugpreprocessed_2 AS b 
 ON a.eid = b.eid; 
 QUIT; 
 
@@ -636,12 +640,114 @@ IF LDL_num = . THEN delete;
 IF TG_num = . THEN delete; 
 RUN; 
 
+* 최종 데이터셋 총원 315,052; 
+
+* Merge 후 전처리, HTN_med = 1인 사람은 High_Blood_Pressure_diagnosed = 1이어야 함; 
+data zio.ukb_1st_final;
+set zio.ukb_1st_final;
+if HTN_med=1 then high_blood_pressure_diagnosed=1;
+if SBP >130 or DBP>80 then high_blood_pressure_diagnosed=1;
+run;
+
+* ARB, ACEi 합치기; 
+DATA zio.ukb_1st_final; 
+SET zio.ukb_1st_final; 
+IF ARB = 1 OR ACEi = 1 THEN ARB_ACEi = 1; 
+RUN; 
+
+* ARB_ACEi - null to 0; 
+DATA zio.ukb_1st_final_HBP_med; 
+SET zio.ukb_1st_final_HBP_med; 
+IF ARB_ACEi = . THEN ARB_ACEi = 0; 
+RUN; 
 
 /* Count Outcome */ 
-proc freq data=zio.ukb_1st_final; 
-tables HTN_med * N18; 
+proc freq data=zio.ukb_1st_final_HBP_med; 
+tables HTN_med*ARB_ACEi*Other_HTN_med; 
 RUN; 
 
 /* ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- */ 
 /* UKB_1ST_FINAL.sas7bdat preprocessing DONE. */ 
 /* Move to PSM program */ 
+
+proc freq data=zio.ukb_1st_final; 
+table N18; 
+run; 
+
+data zio.ukb_1st_final_new;
+set zio.ukb_1st_final;
+if high_blood_pressure_diagnosed=1;
+
+if ARB_ACEI=1 then ARB_ACEI2=ARB_ACEI;
+
+if HTN_MED=0 then ARB_ACEI2=0;
+
+if ARB_ACEI2^=.;
+
+run;
+
+data zio.ukb_1st_final_new2;
+set zio.ukb_1st_final;
+if high_blood_pressure_diagnosed=1;
+
+if HTN_MED=1 and ARB_ACEI=1 then delete;
+
+run;
+
+* ARB+ACEi, Other_HTN_med 둘 다 먹는 사람들 자르기; 
+* 각 ARB+ACEi / Other HTN med 먹는 사람 기준으로 PSM - ARB_ACEI2; 
+data zio.ukb_1st_final_dropdup; 
+set zio.ukb_1st_final_HBP_med; 
+if ARB_ACEI = 1 AND Other_HTN_med = 1 THEN delete; 
+if ARB_ACEI=1 then ARB_ACEI2=ARB_ACEI;
+if Other_HTN_med = 1 then ARB_ACEI2=0;
+run; 
+
+proc freq data=zio.ukb_1st_final_dropdup; 
+table ARB_ACEI2; 
+
+
+/* descriptive */ 
+
+* all HTN patients; 
+proc means data=zio.ukb_1st_final_HBP mean median min max n nmiss; 
+run; 
+
+* no med; 
+PROC SQL;
+CREATE TABLE work.ukb_nomed AS 
+SELECT *
+FROM zio.ukb_1st_final
+WHERE HTN_med = 0 and High_Blood_Pressure_diagnosed = 1; 
+QUIT; 
+
+proc means data=work.ukb_nomed mean median min max n nmiss; 
+run;
+
+* ARB+ACEi; 
+PROC SQL;
+CREATE TABLE work.ukb_arb_acei AS 
+SELECT *
+FROM zio.ukb_1st_final
+WHERE ARB_ACEI = 1 and High_Blood_Pressure_diagnosed = 1; 
+QUIT; 
+
+proc means data=work.ukb_arb_acei mean median min max n nmiss; 
+run;
+
+* Other HTN med; 
+PROC SQL;
+CREATE TABLE work.ukb_other_htn_med AS 
+SELECT *
+FROM zio.ukb_1st_final_HBP_med
+WHERE Other_HTN_med = 1; 
+QUIT; 
+
+proc means data=work.ukb_other_htn_med mean median min max n nmiss; 
+run;
+
+
+proc export data=zio.ukb_1st_final
+    outfile="D:\SNUlab\SAS\ukb_1st_final.csv"
+    dbms=csv;
+run;
