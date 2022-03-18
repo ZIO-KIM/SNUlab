@@ -157,6 +157,7 @@ mi_df <- read.csv('0. data\\국건영_ABSI\\absi_mi.csv', encoding = 'euc-kr')
 lip_df <- read.csv('0. data\\국건영_ABSI\\absi_lip.csv', encoding = 'euc-kr')
 ceva_df <- read.csv('0. data\\국건영_ABSI\\absi_ceva.csv', encoding = 'euc-kr')
 gout_df <- read.csv('0. data\\국건영_ABSI\\absi_gout.csv', encoding = 'euc-kr')
+cancer_df <- read.csv('0. data\\국건영_ABSI\\absi_cancer.csv', encoding = 'euc-kr')
 
 #### copy df to use
 
@@ -189,6 +190,11 @@ target_name <- "CEVA_final"
 df <- copy(gout_df)
 target <- df$GOUT_final
 target_name <- "GOUT_final"
+
+# CANCER
+df <- copy(cancer_df)
+target <- df$Cancer_final
+target_name <- "Cancer_final"
 
 ###################
 
