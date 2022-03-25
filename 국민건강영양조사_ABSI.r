@@ -30,6 +30,7 @@ library(knitr)
 library(rmarkdown)
 library(survival)
 library(ggplot2)
+library(gmodels)
 #################
 
 
@@ -209,6 +210,32 @@ df$DRINK <- factor(df$DRINK)
 
 ###################
 
+# ABSI, BMI 분포 확인
+hist(df$ABSI_Z)
+hist(df$ABSI)
+hist(df$BMI)
+
+summary(df$ABSI_Z)
+summary(df$ABSI)
+summary(df$BMI)
+
+nrow(df[df$ABSI >= 0.07976,])   # ABSI 3quartile 이상인 사람
+nrow(df[df$BMI >= 26.27,])  # BMI 3quartile 이상인 사람
+
+nrow(df[df$ABSI <= 0.07302,])   # ABSI 1quartile 이하인 사람
+nrow(df[df$BMI <= 22.37,])  # BMI 1quartile 이하인 사람
+
+# ABSI, BMI categorize
+df$absi_category <- 0
+df$bmi_category <- 0
+
+df$absi_category[df$ABSI >= 0.07976] <- 1 # 3quartile 이상 (25%)
+df$absi_category[df$ABSI < 0.07976] <- 0 # 3quartile 미만 (75%)
+
+df$bmi_category[df$BMI >= 26.27] <- 1 # 3quartile 이상 (25%)
+df$bmi_category[df$BMI < 26.27] <- 0 # 3quartile 미만 (75%)
+
+CrossTable(df$absi_category, df$bmi_category)
 
 #### Stepwise variable selection ####
 
@@ -217,7 +244,7 @@ variables <- colnames(df)
 
 # 선택되면 안되는 변수들 빼기
 variables <- variables[!variables %in% c(target_name, "기수", "NIHID", "VISITALL", "TIME", "BMI", 
-"ABSI", "ABSI_Z", "HTN_age", "DM_age", 'MI_age', "LIP_age", "CEVA_age", "GOUT_age")]
+"ABSI", "ABSI_Z", "HTN_age", "ABSI_category", "BMI_category", "DM_age", 'MI_age', "LIP_age", "CEVA_age", "GOUT_age")]
 
 df2 <- df[variables]
 
