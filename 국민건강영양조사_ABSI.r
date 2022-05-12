@@ -1031,7 +1031,11 @@ df$BD2_1[df$BD2_1 >= 4 & df$BD2_1 <= 5] <- 2
 df$BD2_1[df$BD2_1 >= 8 & df$BD2_1 <= 9] <- 3
 
 
-summary(df)
+output <- capture.output(summary(df), file=NULL,append=FALSE)
+output_collapsed <- paste0(output, sep=" ", collapse="\n")
+output_df <- as.data.frame(output_collapsed)
+write.csv(output_df, "descriptive.csv", row.names = F, fileEncoding = 'euc-kr')
+
 df2 <- df[df$absi_bmi_category == 0,]
 df2 <- df[df$absi_bmi_category == 1,]
 df2 <- df[df$absi_bmi_category == 2,]
