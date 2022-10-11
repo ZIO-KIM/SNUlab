@@ -1,5 +1,7 @@
 
-# ¿©·¯ÁÙ ÁÖ¼®Ã³¸® ctrl+ shift + c
+install.packages("languageserver")
+
+# ì—¬ëŸ¬ì¤„ ì£¼ì„ì²˜ë¦¬ ctrl+ shift + c
 #### install ####
 install.packages("forecast")
 install.packages("Metrics")
@@ -21,7 +23,7 @@ library(randomForest)
 
 # BFM df #
   df <- read.csv("testdf1001_final.csv", encoding = 'euc-kr')
-  # ÀÌ»óÄ¡ Çà »èÁ¦ # 
+  # ì´ìƒì¹˜ í–‰ ì‚­ì œ # 
 df$ID=1:dim(df)[1]
 
 df=df[-which(df$ID%in%c(4450, 16871, 5442, 3755, 11259, 12170, 521, 14506, 718, 3768, 3571, 2629, 14566, 3998, 3981, 16269, 5593, 4453, 
@@ -35,17 +37,22 @@ df=df[-which(df$ID%in%c(4450, 16871, 5442, 3755, 11259, 12170, 521, 14506, 718, 
   
 # LBM+ASM df #
   df <- read.csv("testdf1007_LBM+ASM_final.csv", encoding = 'euc-kr')
-  # ÀÌ»óÄ¡ Çà »èÁ¦ # 
+  # ì´ìƒì¹˜ í–‰ ì‚­ì œ # 
   df <- df[-c(11421, 504, 13504, 694, 15180, 15034, 9602, 11421, 1560, 12423, 3435, 2552, 3597, 524, 14997, 3823, 15746, 4261, 
               13819, 11831, 4264),]
 #################
 
 
-## wc º¯¼ö Á¦°ÅÇÒ °æ¿ì ½ÇÇà##
+# ìŠ¹ë¯¼ìƒ˜ ë…¼ë¬¸ê³¼ í†µì¼ ì‘ì—… #
+# 20 - 65ì„¸ë§Œ ë‚¨ê¸°ê¸° #
+df <- df[(df$age >= 20) & (df$age <= 65), ]  # 15751 -> 12490
+
+
+## wc ë³€ìˆ˜ ì œê±°í•  ê²½ìš° ì‹¤í–‰##
 df <- subset(df, select=-c(HE_wc))
   
 ##change column names##
-colnames(df)[colnames(df) == 'DW_WBT_FT'] <- 'ÃÑÁö¹æ·®'
+colnames(df)[colnames(df) == 'DW_WBT_FT'] <- 'ì´ì§€ë°©ëŸ‰'
   
 # train test split
 set.seed(1512315)
@@ -54,19 +61,19 @@ train<-df[dt,]
 test<-df[-dt,]
 
 
-### ÃÑÁö¹æ·® ÁÖ¿äº¯¼ö¸¸ »ç¿ë / ±¹°Ç¿µ ####
-# BS3_1_1.0 : ÇöÀç Èí¿¬ÀÚ
-# BS3_1_2.0 : °ú°Å Èí¿¬, ÇöÀç Èí¿¬ÇÏÁö ¾ÊÀ½
+### ì´ì§€ë°©ëŸ‰ ì£¼ìš”ë³€ìˆ˜ë§Œ ì‚¬ìš© / êµ­ê±´ì˜ ####
+# BS3_1_1.0 : í˜„ì¬ í¡ì—°ì
+# BS3_1_2.0 : ê³¼ê±° í¡ì—°, í˜„ì¬ í¡ì—°í•˜ì§€ ì•ŠìŒ
 
 # BFM fit, with HE_wc #
-fit <- lm(ÃÑÁö¹æ·® ~  HE_wt + HE_wc + BS3_1_1.0 + BS3_1_2.0 + HE_ht + sex_1.0 + HE_chol + age + HE_sbp_tr, data = train)
+fit <- lm(ì´ì§€ë°©ëŸ‰ ~  HE_wt + HE_wc + BS3_1_1.0 + BS3_1_2.0 + HE_ht + sex_1.0 + HE_chol + age + HE_sbp_tr, data = train)
 
 # plot(fit) + geom_text(aes(label = ID), size = 8)
 # 
 # train[train$ID == 4457, ]
 
 # BFM fit, without HE_wc #
-fit <- lm(ÃÑÁö¹æ·® ~  HE_wt + BS3_1_1.0 + BS3_1_2.0 + HE_ht + sex_1.0 + HE_chol + age + HE_sbp_tr, data = train)
+fit <- lm(ì´ì§€ë°©ëŸ‰ ~  HE_wt + BS3_1_1.0 + BS3_1_2.0 + HE_ht + sex_1.0 + HE_chol + age + HE_sbp_tr, data = train)
 
 # LBM fit, with HE_wc #
 fit <- lm(LBM ~  HE_wt + HE_wc + BS3_1_1.0 + BS3_1_2.0 + HE_ht + sex_1.0 + HE_chol + age + HE_sbp_tr, data = train)
@@ -86,6 +93,11 @@ fit <- lm(DW_WBT_BMC ~  HE_wt + BS3_1_1.0 + BS3_1_2.0 + HE_ht + sex_1.0 + HE_cho
 # HE_wt - LBM fit, with HE_wc #
 fit <- lm(HE_wt - LBM ~  HE_wt + HE_wc + BS3_1_1.0 + BS3_1_2.0 + HE_ht + sex_1.0 + HE_chol + age + HE_sbp_tr, data = train)
 
+# LBM fit, without HE_wc and chol#
+fit <- lm(LBM ~  HE_wt + BS3_1_1.0 + BS3_1_2.0 + HE_ht + sex_1.0 + age + HE_sbp_tr, data = train)
+
+# BFM fit, without HE_wc and chol#
+fit <- lm(ì´ì§€ë°©ëŸ‰ ~  HE_wt + BS3_1_1.0 + BS3_1_2.0 + HE_ht + sex_1.0 + age + HE_sbp_tr, data = train)
 
 ################
 
@@ -97,11 +109,11 @@ sum(aov_fit[[1]][,3])
 sum_fit=summary(fit)
 sum_fit$r.squared
 dim(train)[1]
-SSE=sqrt(var(train$ÃÑÁö¹æ·®))*sqrt((1-summary(fit)$r.squared)*(dim(train)[1]-1)/(dim(train)[1]-2))
+SSE=sqrt(var(train$ì´ì§€ë°©ëŸ‰))*sqrt((1-summary(fit)$r.squared)*(dim(train)[1]-1)/(dim(train)[1]-2))
 
 
-# ÃÑÁö¹æ·® fitted RMSE #
-rmse(fit$fitted.values,train$'ÃÑÁö¹æ·®')
+# ì´ì§€ë°©ëŸ‰ fitted RMSE #
+rmse(fit$fitted.values,train$'ì´ì§€ë°©ëŸ‰')
 # LBM fitted RMSE #
 rmse(fit$fitted.values,train$'LBM')
 
@@ -113,8 +125,8 @@ rmse(fit$fitted.values,train$'DW_WBT_BMC')
 test$predicted=predict(fit, newdata = test,type="response")
 
 
-# ÃÑÁö¹æ·® RMSE # 
-rmse(test$'ÃÑÁö¹æ·®', test$predicted) 
+# ì´ì§€ë°©ëŸ‰ RMSE # 
+rmse(test$'ì´ì§€ë°©ëŸ‰', test$predicted) 
 
 # LBM RMSE # 
 rmse(test$'LBM', test$predicted) 
@@ -123,8 +135,8 @@ rmse(test$'LBM', test$predicted)
 rmse(test$'DW_WBT_BMC', test$predicted) 
 
 
-# (WEIGHT - predicted LBM) & ÃÑÁö¹æ·® RMSE # 
-rmse(test$'HE_wt' - test$predicted, test$'ÃÑÁö¹æ·®')
+# (WEIGHT - predicted LBM) & ì´ì§€ë°©ëŸ‰ RMSE # 
+rmse(test$'HE_wt' - test$predicted, test$'ì´ì§€ë°©ëŸ‰')
 
 
 # visualization
@@ -134,11 +146,11 @@ hist(scale(fit$residuals))
 
 ################################################################
 
-### ÃÑÁö¹æ·® ÁÖ¿äº¯¼ö¸¸ »ç¿ë / ¾È»ê¾È¼ºÄÚÈ£Æ® ####
+### ì´ì§€ë°©ëŸ‰ ì£¼ìš”ë³€ìˆ˜ë§Œ ì‚¬ìš© / ì•ˆì‚°ì•ˆì„±ì½”í˜¸íŠ¸ ####
 
 ## BFM df ##
   df2 <- read.csv('MME_preprocessed_eGFR.csv', encoding = 'euc-kr')
-  # ÀÌ»óÄ¡ Çà Á¦°Å #
+  # ì´ìƒì¹˜ í–‰ ì œê±° #
   df2 <- df2[-c(13364),]
 ############
 
@@ -150,12 +162,12 @@ df2 <- read.csv('MME_preprocessed_eGFR.csv', encoding = 'euc-kr')
 
 ############
 
-## ±ÙÀ°·® df ## test
-df2 <- read.csv('MME_preprocessed_eGFR+±ÙÀ°·®.csv', encoding = 'euc-kr')
+## ê·¼ìœ¡ëŸ‰ df ## test
+df2 <- read.csv('MME_preprocessed_eGFR+ê·¼ìœ¡ëŸ‰.csv', encoding = 'euc-kr')
 ############
   
 ##change column names##
-colnames(df2)[colnames(df2) == 'BODYFAT'] <- 'ÃÑÁö¹æ·®'
+colnames(df2)[colnames(df2) == 'BODYFAT'] <- 'ì´ì§€ë°©ëŸ‰'
 colnames(df2)[colnames(df2) == 'WEIGHT'] <- 'HE_wt'
 colnames(df2)[colnames(df2) == 'HEIGHT'] <- 'HE_ht'
 colnames(df2)[colnames(df2) == 'WAIST'] <- 'HE_wc'
@@ -170,30 +182,32 @@ colnames(df2)[colnames(df2) == 'SBP_AVG'] <- 'HE_sbp_tr'
 colnames(df2)[colnames(df2) == 'SBP'] <- 'HE_sbp_tr'
 
 
+# HE_wt ë‹¨ìœ„ ë³€ê²½ (g -> kg) # 
+df2$HE_wt <- df2$HE_wt / 1000
 
-## wc º¯¼ö Á¦°ÅÇÒ °æ¿ì ½ÇÇà##
+## wc ë³€ìˆ˜ ì œê±°í•  ê²½ìš° ì‹¤í–‰##
 df2 <- subset(df2, select=-c(HE_wc))
 
 #predict
-df2$predicted=predict(fit, newdata = df2,type="response")
+df2$predicted=predict(fit, newdata = df2, type="response")
 
 sum(is.na(df2$predicted))
 
 # write.csv(df2, file = "MME_seo_BFMpredicted.csv", row.names = FALSE)
 # write.csv(df2, file = "MME_seo_LBMpredicted.csv", row.names = FALSE)
 
-rmse(df2$'ÃÑÁö¹æ·®'[which(df2$±â¼ö == 'A01')], df2$predicted[which(df2$±â¼ö == 'A01')]) 
+rmse(df2$'ì´ì§€ë°©ëŸ‰'[which(df2$ê¸°ìˆ˜ == 'A01')], df2$predicted[which(df2$ê¸°ìˆ˜ == 'A01')]) 
 
 # BFM RMSE #
-rmse(df2$'ÃÑÁö¹æ·®', df2$predicted) 
+rmse(df2$'ì´ì§€ë°©ëŸ‰', df2$predicted) 
 # BFM plot # 
-plot(df2$'ÃÑÁö¹æ·®', df2$predicted)
+plot(df2$'ì´ì§€ë°©ëŸ‰', df2$predicted)
 # BFM summary # 
-summary(lm(ÃÑÁö¹æ·® ~ predicted, data = df2))
+summary(lm(ì´ì§€ë°©ëŸ‰ ~ predicted, data = df2))
 
 
 # LBM RMSE #
-rmse(df2$'LBM', df2$predicted) 
+rmse(df2$'LBM', df2$predicted)
 # LBM plot # 
 plot(df2$'LBM', df2$predicted)
 # LBM summary # 
@@ -208,8 +222,8 @@ plot(df2$'HE_wt' - df2$'LBM', df2$predicted)
 summary(lm(LBM ~ predicted, data = df2))
 
 
-# (WEIGHT - predicted LBM) & ÃÑÁö¹æ·® RMSE # 
-rmse(df2$'HE_wt' - df2$predicted, df2$'ÃÑÁö¹æ·®')
+# (WEIGHT - predicted LBM) & ì´ì§€ë°©ëŸ‰ RMSE # 
+rmse(df2$'HE_wt' - df2$predicted, df2$'ì´ì§€ë°©ëŸ‰')
 
 
 # IB1_3 test
@@ -219,24 +233,24 @@ plot(df2$'IB1_3', df2$predicted)
 #######################################################
 
 
-### ÃÑÁö¹æ·® ÁÖ¿äº¯¼ö¸¸ »ç¿ë / °ËÁõ¼¾ÅÍÀÚ·á ####
+### ì´ì§€ë°©ëŸ‰ ì£¼ìš”ë³€ìˆ˜ë§Œ ì‚¬ìš© / ê²€ì¦ì„¼í„°ìë£Œ ####
 
 # BFM df #
-df3 <- read.csv('°ÇÁõ¼¾ÅÍ_preprocessed.csv', encoding = 'euc-kr')
+df3 <- read.csv('ê±´ì¦ì„¼í„°_preprocessed.csv', encoding = 'euc-kr')
 
 # LBM df #
-df3 <- read.csv('°ËÁõ¼¾ÅÍ_preprocessed_LBM.csv', encoding = 'euc-kr')
+df3 <- read.csv('ê²€ì¦ì„¼í„°_preprocessed_LBM.csv', encoding = 'euc-kr')
 
 ##change column names##
-colnames(df3)[colnames(df3) == 'Ã¼Áö¹æ'] <- 'ÃÑÁö¹æ·®'
-colnames(df3)[colnames(df3) == 'Ã¼Áß'] <- 'HE_wt'
-colnames(df3)[colnames(df3) == '½ÅÀå'] <- 'HE_ht'
+colnames(df3)[colnames(df3) == 'ì²´ì§€ë°©'] <- 'ì´ì§€ë°©ëŸ‰'
+colnames(df3)[colnames(df3) == 'ì²´ì¤‘'] <- 'HE_wt'
+colnames(df3)[colnames(df3) == 'ì‹ ì¥'] <- 'HE_ht'
 colnames(df3)[colnames(df3) == 'cholesterol'] <- 'HE_chol'
-colnames(df3)[colnames(df3) == '¼öÁø½Ã³ªÀÌ'] <- 'age'
+colnames(df3)[colnames(df3) == 'ìˆ˜ì§„ì‹œë‚˜ì´'] <- 'age'
 
-colnames(df3)[colnames(df3) == 'Èí¿¬¿©ºÎ_2.0'] <- 'BS3_1_2.0'
-colnames(df3)[colnames(df3) == 'Èí¿¬¿©ºÎ_3.0'] <- 'BS3_1_1.0'
-colnames(df3)[colnames(df3) == '¼ºº°_M'] <- 'sex_1.0'
+colnames(df3)[colnames(df3) == 'í¡ì—°ì—¬ë¶€_2.0'] <- 'BS3_1_2.0'
+colnames(df3)[colnames(df3) == 'í¡ì—°ì—¬ë¶€_3.0'] <- 'BS3_1_1.0'
+colnames(df3)[colnames(df3) == 'ì„±ë³„_M'] <- 'sex_1.0'
 colnames(df3)[colnames(df3) == 'SBP'] <- 'HE_sbp_tr'
 
 
@@ -244,9 +258,9 @@ colnames(df3)[colnames(df3) == 'SBP'] <- 'HE_sbp_tr'
 df3$predicted=predict(fit, newdata = df3,type="response")
 
 # BFM RMSE #
-rmse(df3$'ÃÑÁö¹æ·®', df3$predicted) 
+rmse(df3$'ì´ì§€ë°©ëŸ‰', df3$predicted) 
 # BFM plot #
-plot(df3$'ÃÑÁö¹æ·®', df3$predicted)
+plot(df3$'ì´ì§€ë°©ëŸ‰', df3$predicted)
 abline(0,1,col="red")
 
 # LBM RMSE #
@@ -255,8 +269,8 @@ rmse(df3$'LBM', df3$predicted)
 plot(df3$'LBM', df3$predicted)
 abline(0,1,col="red")
 
-# (WEIGHT - predicted LBM) & ÃÑÁö¹æ·® RMSE # 
-rmse(df3$'HE_wt' - df3$predicted, df3$'ÃÑÁö¹æ·®')
+# (WEIGHT - predicted LBM) & ì´ì§€ë°©ëŸ‰ RMSE # 
+rmse(df3$'HE_wt' - df3$predicted, df3$'ì´ì§€ë°©ëŸ‰')
 
 
 #######################################################
@@ -265,7 +279,7 @@ rmse(df3$'HE_wt' - df3$predicted, df3$'ÃÑÁö¹æ·®')
 
 
 
-### stepwise·Î º¯¼ö select
+### stepwiseë¡œ ë³€ìˆ˜ select
 dftmp <- read.csv('LBMstepwise_1013.csv', encoding = 'euc-kr')
 full <- lm(LBM ~ ., data = dftmp)
 
@@ -278,12 +292,12 @@ summary(step_lm_fat)
 
 
 
-## ÃÑ°ñ¹Ğµµ
-#lm.init <- lm(ÃÑ°ñ¹Ğµµ ~ age + HE_ht + HE_wt + HE_BMI + HE_sbp_tr + 
+## ì´ê³¨ë°€ë„
+#lm.init <- lm(ì´ê³¨ë°€ë„ ~ age + HE_ht + HE_wt + HE_BMI + HE_sbp_tr + 
 #                    HE_dbp_tr + HE_Upro + HE_glu + HE_chol + 
 #                    HE_wc + HE_HDL_st2 + HE_crea , data = df_model_bone)
 
-lm.full <- lm(ÃÑ°ñ¹Ğµµ ~ ., data = df_model_bone)
+lm.full <- lm(ì´ê³¨ë°€ë„ ~ ., data = df_model_bone)
 
 step_lm_bone<-step(lm.full, verbose=T)
 
